@@ -34,11 +34,11 @@
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
-    padding: 32px 16px 64px;
+    padding: 20px 16px 40px;
   }
-  .wrap { max-width: 860px; margin: 0 auto; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
 
-  header { margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  header { margin-bottom: 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   header h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
   header p { color: var(--text-2); font-size: 13px; margin-top: 4px; }
   .badge {
@@ -51,8 +51,8 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 18px 22px;
-    margin-bottom: 14px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
   }
   .card h2 {
     font-size: 13px; font-weight: 600; color: var(--text-2);
@@ -63,7 +63,7 @@
 
   label { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
   .hint { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.7; }
-  .hint code, .doc code { font-family: var(--mono); background: #eef0f3; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
+  .hint code { font-family: var(--mono); background: #eef0f3; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
 
   input[type="text"], input[type="password"], select, textarea {
     width: 100%;
@@ -132,24 +132,31 @@
   .alert-warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
   .alert-info { background: var(--accent-soft); border-color: #b2ddff; color: #175cd3; }
 
-  /* ---- 结果区 ---- */
-  .result-head { display: flex; gap: 16px; }
-  .cover-box { flex: 0 0 168px; }
+  /* ---- 结果区：左预览 / 右信息，避免整页被视频撑高 ---- */
+  .result-grid {
+    display: grid; grid-template-columns: 300px minmax(0, 1fr);
+    gap: 18px; align-items: start;
+  }
+  .result-media, .result-info { min-width: 0; }
+  @media (max-width: 760px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .result-head { display: flex; gap: 12px; }
+  .cover-box { flex: 0 0 104px; }
   .cover-box img {
-    width: 168px; border-radius: 8px; border: 1px solid var(--border);
+    width: 104px; border-radius: 8px; border: 1px solid var(--border);
     display: block; background: #f2f4f7; aspect-ratio: 9/16; object-fit: cover;
   }
-  .cover-box .btn-ghost { width: 100%; margin-top: 8px; text-align: center; }
+  .cover-box .btn-ghost { width: 100%; margin-top: 6px; text-align: center; padding: 4px 6px; font-size: 12px; }
   .meta { flex: 1; min-width: 0; }
   .meta .title {
-    font-size: 16px; font-weight: 600; line-height: 1.5; cursor: pointer;
-    border-radius: 6px; padding: 2px 6px; margin: -2px -6px 8px;
+    font-size: 15px; font-weight: 600; line-height: 1.5; cursor: pointer;
+    border-radius: 6px; padding: 2px 6px; margin: -2px -6px 6px;
   }
   .meta .title:hover { background: var(--accent-soft); }
   .meta .desc {
-    font-size: 13px; color: var(--text-2); white-space: pre-wrap; word-break: break-all;
-    cursor: pointer; border-radius: 6px; padding: 4px 6px; margin: 0 -6px 10px;
-    max-height: 120px; overflow-y: auto;
+    font-size: 12.5px; color: var(--text-2); white-space: pre-wrap; word-break: break-all;
+    cursor: pointer; border-radius: 6px; padding: 4px 6px; margin: 0 -6px 8px;
+    max-height: 86px; overflow-y: auto;
   }
   .meta .desc:hover { background: var(--accent-soft); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -159,22 +166,25 @@
   }
   .chip b { color: var(--text); font-weight: 600; }
 
-  .player-wrap { margin-top: 14px; }
+  .player-wrap { margin-top: 12px; }
   .player-wrap video, .player-wrap audio {
-    width: 100%; border-radius: 8px; background: #000; outline: none;
+    border-radius: 8px; background: #000; outline: none; display: block;
   }
+  .player-wrap video { height: 380px; width: auto; max-width: 100%; margin: 0 auto; }
+  .player-wrap audio { width: 100%; }
   .player-wrap .label { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+  .result-media .player-wrap:first-child { margin-top: 0; }
 
-  .ops { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .ops { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
-  .transcript-box { margin-top: 14px; }
+  .transcript-box { margin-top: 12px; }
   .transcript-box .head {
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
   }
   .transcript-box .head span { font-size: 13px; font-weight: 600; color: var(--text-2); }
   .transcript-box .head .ops { margin-top: 0; }
   #transcriptText {
-    min-height: 140px; resize: vertical; line-height: 1.7; background: #fafbfc; font-size: 13px;
+    min-height: 120px; resize: vertical; line-height: 1.7; background: #fafbfc; font-size: 13px;
   }
 
   details { margin-top: 14px; }
@@ -193,18 +203,7 @@
   .settings summary:hover { color: var(--text); }
   .settings-body { margin-top: 12px; }
 
-  .doc {
-    font-size: 12.5px; color: var(--text-2); line-height: 1.9;
-  }
-  .doc h3 { font-size: 13px; color: var(--text); margin: 14px 0 6px; }
-  .doc ul { padding-left: 20px; }
-  .doc li { margin-bottom: 4px; }
-  .doc .warnbox {
-    background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text);
-    border-radius: 8px; padding: 10px 14px; margin-top: 10px;
-  }
-
-  footer { font-size: 12px; color: var(--text-3); text-align: center; margin-top: 28px; line-height: 1.9; }
+  footer { font-size: 12px; color: var(--text-3); text-align: center; margin-top: 20px; line-height: 1.9; }
   .hidden { display: none !important; }
   .spinner {
     display: inline-block; width: 12px; height: 12px;
@@ -228,7 +227,7 @@
   </header>
 
   <!-- ========== 设置面板 ========== -->
-  <section class="card settings" id="settingsCard">
+  <section class="card settings hidden" id="settingsCard">
     <details id="settingsDetails">
       <summary>设置：解析服务、转写 API Key、识别模型（默认已配置好，通常无需修改）</summary>
       <div class="settings-body">
@@ -252,7 +251,7 @@
         <div class="field">
           <label for="parseApi">解析接口（优先级最高；支持 <code>{url}</code> 与 <code>{id}</code> 占位符）<span id="apiBadge" style="display:none; margin-left:8px; font-size:11px; font-weight:600; color:#0a7d43; background:#e6f7ee; border:1px solid #b7e4c9; border-radius:20px; padding:1px 8px;">● 已启用</span></label>
           <input type="text" id="parseApi" placeholder="https://你的解析服务/api/parse?url={url}">
-          <p class="hint"><b>已默认为你配置好一个在线解析服务，无需任何设置即可直接解析链接。</b>它是本工具自带的 Node 服务（源码见「解析服务」一节），服务端完成「短链跳转 → 取 ttwid → 手机 UA 请求分享页 → 提取 <code>_ROUTER_DATA</code> → playwm 换 play 得无水印地址」。若该服务不可用，可换成你自己的任意解析接口，页面会自动适配常见返回格式。<button type="button" class="btn-ghost" id="resetApiBtn" style="margin-left:6px; padding:2px 8px; font-size:12px;">恢复默认</button></p>
+          <p class="hint"><b>已默认为你配置好一个在线解析服务，无需任何设置即可直接解析链接。</b>它是本工具自带的 Node 服务（源码在项目 <code>douyin-service/</code> 目录），服务端完成「短链跳转 → 取 ttwid → 手机 UA 请求分享页 → 提取 <code>_ROUTER_DATA</code> → playwm 换 play 得无水印地址」。若该服务不可用，可换成你自己的任意解析接口，页面会自动适配常见返回格式。<button type="button" class="btn-ghost" id="resetApiBtn" style="margin-left:6px; padding:2px 8px; font-size:12px;">恢复默认</button></p>
         </div>
         <div class="field">
           <label for="mediaProxy">媒体代理（用于跨域下载原片 / 播放 / 提取音频，支持 <code>{url}</code> 占位符）</label>
@@ -309,154 +308,59 @@
   <section class="card hidden" id="resultCard">
     <h2>解析结果 <span class="right" id="resultSource"></span></h2>
 
-    <div class="result-head">
-      <div class="cover-box">
-        <img id="coverImg" alt="封面" src="">
-        <button class="btn-ghost" id="downloadCoverBtn">下载封面</button>
-      </div>
-      <div class="meta">
-        <div class="title" id="titleText" title="点击复制"></div>
-        <div class="desc" id="descText" title="点击复制"></div>
-        <div class="chips" id="chips"></div>
-      </div>
-    </div>
-
-    <div class="player-wrap">
-      <div class="label">视频预览</div>
-      <video id="videoPlayer" controls playsinline preload="metadata"></video>
-    </div>
-
-    <div class="ops">
-      <button class="btn-primary" id="downloadVideoBtn">⬇ 下载视频</button>
-      <button class="btn-ghost" id="downloadAudioBtn">⬇ 下载音频</button>
-      <button class="btn-ghost" id="transcribeBtn">🎙 音频转文字</button>
-    </div>
-
-    <div class="player-wrap" id="audioWrap">
-      <div class="label">音频（提取自视频音轨）</div>
-      <audio id="audioPlayer" controls></audio>
-    </div>
-
-    <div class="transcript-box hidden" id="transcriptBox">
-      <div class="head">
-        <span>转写结果</span>
-        <div class="ops">
-          <button class="btn-ghost" id="copyTranscriptBtn">复制</button>
-          <button class="btn-ghost" id="downloadTranscriptBtn">下载 .txt</button>
+    <div class="result-grid">
+      <div class="result-media">
+        <div class="player-wrap">
+          <video id="videoPlayer" controls playsinline preload="metadata"></video>
+        </div>
+        <div class="player-wrap hidden" id="audioWrap">
+          <div class="label">音频（提取自视频音轨）</div>
+          <audio id="audioPlayer" controls></audio>
         </div>
       </div>
-      <textarea id="transcriptText" readonly placeholder="转写结果将显示在这里"></textarea>
-    </div>
 
-    <details>
-      <summary>原始数据（JSON）</summary>
-      <pre id="rawJson"></pre>
-    </details>
-  </section>
+      <div class="result-info">
+        <div class="result-head">
+          <div class="cover-box">
+            <img id="coverImg" alt="封面" src="">
+            <button class="btn-ghost" id="downloadCoverBtn">下载封面</button>
+          </div>
+          <div class="meta">
+            <div class="title" id="titleText" title="点击复制"></div>
+            <div class="desc" id="descText" title="点击复制"></div>
+            <div class="chips" id="chips"></div>
+          </div>
+        </div>
 
-  <!-- ========== 使用说明 ========== -->
-  <section class="card doc">
-    <h2>📖 使用说明与原理</h2>
-    <h3>打开方式（按方便程度选）</h3>
-    <ul>
-      <li><b>本机启动（推荐，界面功能最全）</b>：在 <code>douyin-service</code> 目录双击 <code>启动.bat</code>，或命令行 <code>cd douyin-service &amp;&amp; node server.js</code>（Node 18+，零依赖），然后访问 <code>http://127.0.0.1:3000</code>。页面与服务同源，解析/播放/下载/转文字全部可用。</li>
-      <li><b>直接双击本文件（file://）</b>：页面默认把解析接口指向 <code>http://127.0.0.1:3000</code>，所以只要本机服务在跑，效果与上面相同。想指向自己部署的域名，打开时加 <code>?origin=https://你的域名</code>（会记住）。</li>
-      <li><b>部署到 Vercel</b>：<code>douyin-service/</code> 已按 Serverless 形态适配完成，部署后访问自己的域名即可，页面自动同源，不用改任何配置。详见下方「部署到 Vercel」。</li>
-    </ul>
-    <h3>工作方式</h3>
-    <ul>
-      <li><b>输入</b>：粘贴抖音分享口令 / 短链 / 长链，点「解析」。服务端会返回标题、简介、封面、无水印视频地址，以及点赞、评论、转发、收藏等统计数据。</li>
-      <li><b>为什么必须有服务端</b>：① 抖音接口不返回跨域头（CORS），浏览器直连读不到响应；② 分享页只对<b>手机 UA + ttwid Cookie</b> 返回完整数据，缺任一项只拿到 32KB 空壳页面；③ 浏览器禁止网页设置 <code>Cookie</code> / <code>Referer</code> / <code>User-Agent</code> 请求头（设了也会被静默剥离）。这三点都是硬限制，纯前端无解。</li>
-    </ul>
-    <h3>音频提取与视频下载</h3>
-    <ul>
-      <li><b>媒体中转</b>：抖音 CDN 不返回跨域头、浏览器又禁止修改请求头，所以统一经「设置 → 媒体代理」中转取字节（默认指向本机 / 你的解析服务）。拿到的是<b>原始 mp4</b>——既能一键下载原片，也能解码成 16kHz 单声道 WAV 提取音频；</li>
-      <li><b>备用直链</b>：部分作品的主播放地址会失效，自动改用接口返回的备用地址重试；</li>
-      <li><b>分片下载</b>：云平台（Vercel）单次响应体上限 4.5MB，中转会把响应截成 3MB 分片，页面按 <code>Content-Range</code> 循环取全再拼装，字节级无损；</li>
-      <li><b>实在不行</b>：点「下载视频」保存原片后，用任意播放器观看或交给其他转写工具。</li>
-    </ul>
-    <h3>音频转文字</h3>
-    <ul>
-      <li>使用硅基流动 ASR 接口（默认 SenseVoiceSmall，免费），Key 只保存在你自己浏览器的 localStorage 里，不会发送到除硅基流动以外的任何地方。</li>
-    </ul>
+        <div class="ops">
+          <button class="btn-primary" id="downloadVideoBtn">⬇ 下载视频</button>
+          <button class="btn-ghost" id="downloadAudioBtn">⬇ 下载音频</button>
+          <button class="btn-ghost" id="transcribeBtn">🎙 音频转文字</button>
+        </div>
 
-    <details>
-      <summary><b>🔧 解析服务说明与自建方式</b></summary>
-      <div style="margin-top:10px;">
-        <p><b>默认服务做什么：</b>接收 <code>/api/parse?url=抖音链接</code> → 跟随短链跳转拿作品 ID → 请求 <code>iesdouyin.com</code> 首页获取 <code>ttwid</code> Cookie → 以<b>手机 UA</b> + <code>Referer</code> + <code>ttwid</code> 请求分享页 → 从 <code>window._ROUTER_DATA</code> 提取作品数据 → 播放地址 <code>playwm</code> 换成 <code>play</code> 得到无水印直链 → 返回标准 JSON。另外提供 <code>/api/media?url=</code> 媒体中转（带 CORS 与 Range，可播放、可下载原片、可提取音频）。</p>
-        <p><b>失败会自动重试：</b>分享页偶发只返回空壳，服务端会换新 ttwid 重试最多 3 次；仍失败则多半是作品已删除或设为私密。</p>
-        <p><b>想自己部署一份？</b>完整 Node 服务源码在项目的 <code>douyin-service/server.js</code>（单文件、零依赖，Node 18+），本地跑 <code>node server.js</code>，或用任意支持 Node 的平台部署，把地址填到「解析接口」＝ <code>https://你的域名/api/parse?url={url}</code>，媒体代理会自动带出 <code>https://你的域名/api/media?url={url}</code>。</p>
-        <pre id="workerCode" style="font-family:var(--mono); font-size:11px; background:#f8f9fb; border:1px solid var(--border); border-radius:8px; padding:12px; overflow:auto; max-height:240px; color:var(--text-2); white-space:pre;">WORKER_CODE_PLACEHOLDER</pre>
-        <button class="btn-ghost" id="copyWorkerBtn" style="margin-top:8px;">复制解析服务配置</button>
+        <div class="transcript-box hidden" id="transcriptBox">
+          <div class="head">
+            <span>转写结果</span>
+            <div class="ops">
+              <button class="btn-ghost" id="copyTranscriptBtn">复制</button>
+              <button class="btn-ghost" id="downloadTranscriptBtn">下载 .txt</button>
+            </div>
+          </div>
+          <textarea id="transcriptText" readonly placeholder="转写结果将显示在这里"></textarea>
+        </div>
+
+        <details>
+          <summary>原始数据（JSON）</summary>
+          <pre id="rawJson"></pre>
+        </details>
       </div>
-    </details>
-
-    <details>
-      <summary><b>▲ 部署到 Vercel（含网络连通性注意事项）</b></summary>
-      <div style="margin-top:10px;">
-        <p><b>三步上线：</b>① Vercel 导入仓库，<b>Root Directory 填 <code>douyin-service</code></b>；② 不需要任何环境变量、不需要装依赖（零依赖），直接 Deploy；③ 打开 <code>https://你的域名/api/diag</code> 自检，看到 <code>parse.ok: true</code> 就说明这条链路在你这个部署上是通的。</p>
-        <p><b>页面无需任何配置</b>：同源部署时页面用 <code>location.origin</code> 自动指向自己的 API，并且不会带 <code>sharecode</code> 之类只在特定托管网关才需要的参数。</p>
-        <p><b>网络连通性 —— 这是 Vercel 上唯一容易翻车的地方，逐条说明：</b></p>
-        <ul>
-          <li><b>区域（首要因素）</b>：已默认 <code>hkg1</code>（香港）。Vercel 默认区域是 <code>iad1</code>（美东华盛顿），从美东访问抖音要绕行太平洋，延迟 300ms+，而且美东云厂商 IP 段更容易被风控。若 <code>hkg1</code> 也被风控，改 <code>vercel.json</code> 里 <code>regions</code> 一行重新部署即可，按 <code>hkg1（香港）→ sin1（新加坡）→ kix1（大阪）→ iad1（美东）</code> 顺序试（Hobby 计划只允许 1 个区域，只能一个个来；区域在部署时定死，运行时改不了）。</li>
-          <li><b>出口 IP 被风控</b>：典型表现是 HTTP 200 但只返回约 32KB 的空壳页面（<code>_ROUTER_DATA</code> 里没有 <code>item_list</code>）——<b>看起来像成功，实际没数据</b>，这是最坑的一种失败。服务端的对策是「空 cookie 先探 → 收下分享页自己下发的 <code>ttwid</code> → 带上重发 → 仍拿不到就换 Android UA」，最多 5 轮。</li>
-          <li><b>4.5MB 响应体上限（会直接报错的硬限制）</b>：Vercel Serverless 单次响应体最大 4.5MB，而抖音原片常有 3–30MB，整包透传必然 500。媒体中转因此自动把响应截成 <b>3MB 分片</b>，回 <code>Content-Range: bytes 0-3145727/总长</code>，浏览器看到 206 会自动续请求，<code>&lt;video&gt;</code> 播放不受影响；下载侧按分片循环取全再拼装，<b>字节级无损</b>（有 md5 校验测试）。所以「一次下载 = 多次函数调用」是正常的，不是 bug。</li>
-          <li><b>函数超时</b>：<code>maxDuration</code> 已设 60 秒（Hobby 上限），解析内部另压一层 25 秒预算，宁可自己返回结构化报错，也不让平台硬杀成前端看不见原因的 504。</li>
-          <li><b>冷启动</b>：Serverless 没有常驻进程，每次冷启动都要重新取一次 <code>ttwid</code>（多 0.5–1 秒），所以跨请求 cookie 缓存没意义、已去掉；作为补偿，解析成功时会把 cookie 放进 <code>X-Dy-Cookie</code> 响应头交给前端复用，二次请求可省一次往返。</li>
-        </ul>
-        <p class="hint">最稳的方案仍是把 <code>douyin-service/</code> 丢到一台能直连大陆的机器上跑 <code>node server.js</code>——单进程、零依赖。Vercel 版适合「没机器、图省事」的场景。完整部署说明与排错见 <code>douyin-service/README.md</code>；本地部署前可先跑 <code>node dev-vercel.js</code> 模拟 Vercel 环境验证。</p>
-      </div>
-    </details>
-
-    <div class="warnbox">
-      ⚠️ 请仅解析你有权访问的公开内容。下载的视频版权归原作者所有，请勿用于侵权或商业用途；批量抓取请遵守平台规则与相关法律法规。
     </div>
   </section>
 
   <footer>
-    ASR 接口：<code>POST https://api.siliconflow.cn/v1/audio/transcriptions</code> · 无水印地址由分享页数据构造（playwm → play）<br>
-    前端为单文件、无追踪；链接解析由 <code>douyin-service</code>（Node，零依赖）完成，源码可直接自建。
+    请仅解析你有权访问的公开内容，下载内容版权归原作者，勿用于侵权或商业用途 · 前端单文件、无追踪
   </footer>
 </div>
-
-<!-- Worker 源码（text/plain 避免转义问题） -->
-<script type="text/plain" id="workerSrc">接口契约（本工具自带的解析服务即按此实现）
-
-  GET  {服务地址}/api/parse?url={抖音链接}
-       -> { "code": 0, "data": {
-              "aweme_id": "7699401710581697826",
-              "type": "video",                 // video | images
-              "title": "作品文案…",
-              "author": "极目新闻",
-              "cover": "https://…",            // 封面直链
-              "video_url": "https://aweme.snssdk.com/aweme/v1/play/?…",
-              "video_url_backup": "https://…", // 备用播放地址
-              "duration": 16400,               // 毫秒
-              "width": 1080, "height": 1920,
-              "create_time": 1792656661,       // 秒
-              "statistics": { "digg": 86306, "comment": 43818, "share": 30916, "collect": 13443 },
-              "music": { "title": "…", "author": "…", "url": "" }
-            } }
-       -> 失败时 { "code": 500, "message": "原因" }
-
-  GET  {服务地址}/api/media?url={媒体直链}
-       -> 原样回源字节，带 CORS 与 Range（可播放 / 可下载 / 可解码音频）
-
-  GET  {服务地址}/api/health
-       -> { "ok": true, "uptime": 秒 }
-
-自己部署一份：项目内 douyin-service/server.js 是单文件零依赖的 Node 服务（Node 18+），
-本机 node server.js 即可；也可放到任意 Node 平台（PORT 环境变量指定端口）。
-拿到地址后填「解析接口」= https://你的域名/api/parse?url={url}
-媒体代理会自动同步为 https://你的域名/api/media?url={url}
-
-关键技术点（缺任一项都拿不到数据）：
-  1. 先 GET https://www.iesdouyin.com/ 取 Set-Cookie 里的 ttwid
-  2. 以「手机 UA」+ Referer: https://www.iesdouyin.com/ + Cookie: ttwid=… 
-     请求 https://www.iesdouyin.com/share/video/{作品ID}/
-  3. 从返回 HTML 里抠出 window._ROUTER_DATA（括号配平解析，不能正则）
-  4. loaderData["video_(id)/page"].videoInfoRes.item_list[0] 即作品数据
-  5. play_addr.url_list[0] 里的 playwm 换成 play → 无水印直链</script>
 
 <script>
 (function () {
@@ -694,8 +598,12 @@
     });
   });
   els.settingsToggle.addEventListener('click', function () {
-    els.settingsDetails.open = !els.settingsDetails.open;
-    els.settingsDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    var willShow = els.settingsCard.classList.contains('hidden');
+    els.settingsCard.classList.toggle('hidden', !willShow);
+    if (willShow) {
+      els.settingsDetails.open = true;
+      els.settingsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   });
   els.toggleKeyBtn.addEventListener('click', function () {
     var show = els.asrKey.type === 'password';
@@ -1377,6 +1285,7 @@
     var model = els.asrModel.value;
     if (!key) {
       showError('请先在「设置」中填写硅基流动 API Key。');
+      els.settingsCard.classList.remove('hidden');
       els.settingsDetails.open = true;
       return;
     }
@@ -1470,13 +1379,6 @@
 
   /* ================= 启动 ================= */
   loadSettings();
-
-  /* Worker 代码展示与复制 */
-  $('workerCode').textContent = $('workerSrc').textContent;
-  $('copyWorkerBtn').addEventListener('click', function () {
-    copyText($('workerCode').textContent);
-    flash($('copyWorkerBtn'), '已复制');
-  });
 })();
 </script>
 </body>
