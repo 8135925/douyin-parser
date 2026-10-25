@@ -1,0 +1,9 @@
+{
+  "name": "douyin-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "抖音无水印解析 / 媒体中转 / 音频转文字，零依赖，Vercel 部署版",
+  "engines": {
+    "node": ">=18"
+  }
+}

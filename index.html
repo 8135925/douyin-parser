@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抖音视频解析 · 下载 / 音频提取 / 转文字</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Cpath d='M32 15v21' stroke='%23ffffff' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M23 28l9 9 9-9' fill='none' stroke='%23ffffff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 45h26' stroke='%23ffffff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Cpath d='M32 15v21' stroke='%23ffffff' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M23 28l9 9 9-9' fill='none' stroke='%23ffffff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 45h26' stroke='%23ffffff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e4e7ec;
+    --text: #101828;
+    --text-2: #475467;
+    --text-3: #98a2b3;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: #eff6ff;
+    --danger-bg: #fef3f2;
+    --danger-border: #fda29b;
+    --danger-text: #b42318;
+    --ok-bg: #ecfdf3;
+    --ok-border: #abefc6;
+    --ok-text: #067647;
+    --warn-bg: #fffaeb;
+    --warn-border: #fedf89;
+    --warn-text: #b54708;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  header { margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  header h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  header p { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+  .badge {
+    display: inline-block; font-size: 12px; color: var(--ok-text);
+    background: var(--ok-bg); border: 1px solid var(--ok-border);
+    border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: middle;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 13px; font-weight: 600; color: var(--text-2);
+    letter-spacing: 0.05em; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .right { margin-left: auto; font-weight: 400; letter-spacing: 0; color: var(--text-3); font-size: 12px; }
+
+  label { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+  .hint { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.7; }
+  .hint code, .doc code { font-family: var(--mono); background: #eef0f3; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
+
+  input[type="text"], input[type="password"], select, textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 1; }
+  .row > .auto { flex: 0 0 auto; }
+
+  .btn-primary {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 22px; font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-primary:disabled { background: #cbd5e1; cursor: not-allowed; }
+  .btn-ghost {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 14px; font-size: 13px; color: var(--text-2); cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-ghost:hover:not(:disabled) { background: #f9fafb; border-color: #d0d5dd; }
+  .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  /* ---- 输入区 ---- */
+  .link-input { display: flex; gap: 8px; }
+  .link-input input { flex: 1; font-family: var(--mono); font-size: 13px; }
+  .link-input .btn-primary { flex: 0 0 auto; }
+
+  /* ---- 步骤状态 ---- */
+  .steps { font-size: 13px; }
+  .step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; }
+  .step .dot {
+    width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; margin-top: 2px;
+    border: 1px solid var(--border); background: #f9fafb; color: var(--text-3);
+  }
+  .step.ok .dot { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok-text); }
+  .step.fail .dot { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+  .step.run .dot { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .step .txt { color: var(--text-2); }
+  .step.ok .txt { color: var(--ok-text); }
+  .step.fail .txt { color: var(--danger-text); }
+
+  .alert {
+    border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 12px;
+    border: 1px solid; white-space: pre-wrap; word-break: break-all; line-height: 1.7;
+  }
+  .alert-error { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-text); }
+  .alert-warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+  .alert-info { background: var(--accent-soft); border-color: #b2ddff; color: #175cd3; }
+
+  /* ---- 结果区 ---- */
+  .result-head { display: flex; gap: 16px; }
+  .cover-box { flex: 0 0 168px; }
+  .cover-box img {
+    width: 168px; border-radius: 8px; border: 1px solid var(--border);
+    display: block; background: #f2f4f7; aspect-ratio: 9/16; object-fit: cover;
+  }
+  .cover-box .btn-ghost { width: 100%; margin-top: 8px; text-align: center; }
+  .meta { flex: 1; min-width: 0; }
+  .meta .title {
+    font-size: 16px; font-weight: 600; line-height: 1.5; cursor: pointer;
+    border-radius: 6px; padding: 2px 6px; margin: -2px -6px 8px;
+  }
+  .meta .title:hover { background: var(--accent-soft); }
+  .meta .desc {
+    font-size: 13px; color: var(--text-2); white-space: pre-wrap; word-break: break-all;
+    cursor: pointer; border-radius: 6px; padding: 4px 6px; margin: 0 -6px 10px;
+    max-height: 120px; overflow-y: auto;
+  }
+  .meta .desc:hover { background: var(--accent-soft); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px; color: var(--text-2); background: #f2f4f7;
+    border-radius: 6px; padding: 2px 8px;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+
+  .player-wrap { margin-top: 14px; }
+  .player-wrap video, .player-wrap audio {
+    width: 100%; border-radius: 8px; background: #000; outline: none;
+  }
+  .player-wrap .label { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+
+  .ops { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+  .transcript-box { margin-top: 14px; }
+  .transcript-box .head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .transcript-box .head span { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .transcript-box .head .ops { margin-top: 0; }
+  #transcriptText {
+    min-height: 140px; resize: vertical; line-height: 1.7; background: #fafbfc; font-size: 13px;
+  }
+
+  details { margin-top: 14px; }
+  details summary {
+    font-size: 12px; color: var(--text-3); cursor: pointer; user-select: none;
+    padding: 4px 0;
+  }
+  details summary:hover { color: var(--text-2); }
+  details pre {
+    font-family: var(--mono); font-size: 11px; background: #f8f9fb; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; overflow: auto; max-height: 300px; color: var(--text-2);
+  }
+
+  /* ---- 设置 ---- */
+  .settings summary { font-size: 13px; color: var(--text-2); cursor: pointer; padding: 4px 0; }
+  .settings summary:hover { color: var(--text); }
+  .settings-body { margin-top: 12px; }
+
+  .doc {
+    font-size: 12.5px; color: var(--text-2); line-height: 1.9;
+  }
+  .doc h3 { font-size: 13px; color: var(--text); margin: 14px 0 6px; }
+  .doc ul { padding-left: 20px; }
+  .doc li { margin-bottom: 4px; }
+  .doc .warnbox {
+    background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text);
+    border-radius: 8px; padding: 10px 14px; margin-top: 10px;
+  }
+
+  footer { font-size: 12px; color: var(--text-3); text-align: center; margin-top: 28px; line-height: 1.9; }
+  .hidden { display: none !important; }
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid #cbd5e1; border-top-color: var(--accent);
+    border-radius: 50%; margin-right: 6px; vertical-align: -1px;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #statusLine { font-size: 13px; color: var(--text-2); margin-top: 10px; min-height: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>抖音视频解析<span class="badge">无水印 · 音频转文字</span></h1>
+      <p>粘贴抖音分享链接，提取标题 / 简介 / 封面 / 无水印视频，支持下载视频、提取音频、音频转文字</p>
+    </div>
+    <button class="btn-ghost" id="settingsToggle">⚙ 设置</button>
+  </header>
+
+  <!-- ========== 设置面板 ========== -->
+  <section class="card settings" id="settingsCard">
+    <details id="settingsDetails">
+      <summary>设置：解析服务、转写 API Key、识别模型（默认已配置好，通常无需修改）</summary>
+      <div class="settings-body">
+        <div class="field">
+          <label for="asrKey">硅基流动 API Key（音频转文字用，仅存本机 localStorage）</label>
+          <div class="row">
+            <input type="password" id="asrKey" class="auto" style="flex:1" placeholder="sk-..." autocomplete="off">
+            <button type="button" id="toggleKeyBtn" class="btn-ghost auto" style="flex:0 0 auto">显示</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="asrModel">识别模型（免费）</label>
+          <select id="asrModel">
+            <option value="FunAudioLLM/SenseVoiceSmall">FunAudioLLM/SenseVoiceSmall — 中文优化，速度快</option>
+            <option value="XingChenAGI/XingChenASR-V3.2">XingChenAGI/XingChenASR-V3.2 — 中国电信星辰</option>
+            <option value="XingChenAGI/XingChenASR-V3.2-Ultra">XingChenAGI/XingChenASR-V3.2-Ultra — 高精度</option>
+            <option value="XingChenAGI/XingChenASR-Diarize-V3.0">XingChenAGI/XingChenASR-Diarize-V3.0 — 说话人分离</option>
+            <option value="XingChenAGI/XingChenGSR-V1.0">XingChenAGI/XingChenGSR-V1.0 — 星辰 GSR</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="parseApi">解析接口（优先级最高；支持 <code>{url}</code> 与 <code>{id}</code> 占位符）<span id="apiBadge" style="display:none; margin-left:8px; font-size:11px; font-weight:600; color:#0a7d43; background:#e6f7ee; border:1px solid #b7e4c9; border-radius:20px; padding:1px 8px;">● 已启用</span></label>
+          <input type="text" id="parseApi" placeholder="https://你的解析服务/api/parse?url={url}">
+          <p class="hint"><b>已默认为你配置好一个在线解析服务，无需任何设置即可直接解析链接。</b>它是本工具自带的 Node 服务（源码见「解析服务」一节），服务端完成「短链跳转 → 取 ttwid → 手机 UA 请求分享页 → 提取 <code>_ROUTER_DATA</code> → playwm 换 play 得无水印地址」。若该服务不可用，可换成你自己的任意解析接口，页面会自动适配常见返回格式。<button type="button" class="btn-ghost" id="resetApiBtn" style="margin-left:6px; padding:2px 8px; font-size:12px;">恢复默认</button></p>
+        </div>
+        <div class="field">
+          <label for="mediaProxy">媒体代理（用于跨域下载原片 / 播放 / 提取音频，支持 <code>{url}</code> 占位符）</label>
+          <input type="text" id="mediaProxy" placeholder="https://你的解析服务/api/media?url={url}">
+          <p class="hint">抖音 CDN 不返回跨域头，浏览器无法直接 fetch 视频字节。<b>已默认指向在线解析服务的中转端点</b>（支持 Range，可拖动播放），因此原片下载、音频提取、转文字都能一键完成。填写或更换「解析接口」时会自动同步带出。</p>
+        </div>
+        <div class="field hidden" id="proxyField">
+          <label>公共代理（兜底链路，按顺序尝试；抖音场景通常无效，仅作应急）</label>
+          <div class="row" style="flex-wrap:wrap; gap:6px;">
+            <label style="margin:0; display:flex; align-items:center; gap:5px; font-weight:400;">
+              <input type="checkbox" class="proxyCb" value="direct" checked style="width:auto;"> 直接请求
+            </label>
+            <label style="margin:0; display:flex; align-items:center; gap:5px; font-weight:400;">
+              <input type="checkbox" class="proxyCb" value="allorigins" checked style="width:auto;"> AllOrigins
+            </label>
+            <label style="margin:0; display:flex; align-items:center; gap:5px; font-weight:400;">
+              <input type="checkbox" class="proxyCb" value="codetabs" checked style="width:auto;"> CodeTabs
+            </label>
+            <label style="margin:0; display:flex; align-items:center; gap:5px; font-weight:400;">
+              <input type="checkbox" class="proxyCb" value="corsproxy" style="width:auto;"> CorsProxy.io
+            </label>
+            <label style="margin:0; display:flex; align-items:center; gap:5px; font-weight:400;">
+              <input type="checkbox" class="proxyCb" value="custom" style="width:auto;"> 自定义
+            </label>
+          </div>
+          <input type="text" id="customProxy" class="hidden" style="margin-top:8px" placeholder="自定义代理模板，用 {url} 作目标地址占位符，如 https://my-proxy.com/?{url}">
+        </div>
+        <div class="field hidden" id="ttwidField">
+          <label for="ttwid">ttwid（抖音设备标识，用于让分享页返回完整数据）</label>
+          <div class="row">
+            <input type="text" id="ttwid" class="auto" style="flex:1; font-family:var(--mono); font-size:12px;" placeholder="留空则使用内置默认值">
+            <button type="button" id="refreshTtwidBtn" class="btn-ghost auto" style="flex:0 0 auto">获取新的</button>
+          </div>
+          <p class="hint">ttwid 来自抖音首页下发的 Cookie，一般长期有效。失效时点「获取新的」自动抓取，或手动粘贴。</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ========== 输入区 ========== -->
+  <section class="card">
+    <div class="link-input">
+      <input type="text" id="linkInput" placeholder="粘贴抖音分享口令 / 短链接 / 视频链接，如 https://v.douyin.com/xxxxxx/">
+      <button class="btn-primary" id="parseBtn">解 析</button>
+    </div>
+    <p class="hint">支持 App「复制链接」得到的口令文本（自动提取其中的链接）、v.douyin.com 短链、www.douyin.com/video/xxx 长链、iesdouyin.com 分享链接。</p>
+
+    <div id="steps" class="steps hidden" style="margin-top:14px;"></div>
+    <div id="errorBox"></div>
+    <div id="statusLine"></div>
+  </section>
+
+  <!-- ========== 结果区 ========== -->
+  <section class="card hidden" id="resultCard">
+    <h2>解析结果 <span class="right" id="resultSource"></span></h2>
+
+    <div class="result-head">
+      <div class="cover-box">
+        <img id="coverImg" alt="封面" src="">
+        <button class="btn-ghost" id="downloadCoverBtn">下载封面</button>
+      </div>
+      <div class="meta">
+        <div class="title" id="titleText" title="点击复制"></div>
+        <div class="desc" id="descText" title="点击复制"></div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+
+    <div class="player-wrap">
+      <div class="label">视频预览</div>
+      <video id="videoPlayer" controls playsinline preload="metadata"></video>
+    </div>
+
+    <div class="ops">
+      <button class="btn-primary" id="downloadVideoBtn">⬇ 下载视频</button>
+      <button class="btn-ghost" id="downloadAudioBtn">⬇ 下载音频</button>
+      <button class="btn-ghost" id="transcribeBtn">🎙 音频转文字</button>
+    </div>
+
+    <div class="player-wrap" id="audioWrap">
+      <div class="label">音频（提取自视频音轨）</div>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <div class="transcript-box hidden" id="transcriptBox">
+      <div class="head">
+        <span>转写结果</span>
+        <div class="ops">
+          <button class="btn-ghost" id="copyTranscriptBtn">复制</button>
+          <button class="btn-ghost" id="downloadTranscriptBtn">下载 .txt</button>
+        </div>
+      </div>
+      <textarea id="transcriptText" readonly placeholder="转写结果将显示在这里"></textarea>
+    </div>
+
+    <details>
+      <summary>原始数据（JSON）</summary>
+      <pre id="rawJson"></pre>
+    </details>
+  </section>
+
+  <!-- ========== 使用说明 ========== -->
+  <section class="card doc">
+    <h2>📖 使用说明与原理</h2>
+    <h3>打开方式（按方便程度选）</h3>
+    <ul>
+      <li><b>本机启动（推荐，界面功能最全）</b>：在 <code>douyin-service</code> 目录双击 <code>启动.bat</code>，或命令行 <code>cd douyin-service &amp;&amp; node server.js</code>（Node 18+，零依赖），然后访问 <code>http://127.0.0.1:3000</code>。页面与服务同源，解析/播放/下载/转文字全部可用。</li>
+      <li><b>直接双击本文件（file://）</b>：页面默认把解析接口指向 <code>http://127.0.0.1:3000</code>，所以只要本机服务在跑，效果与上面相同。想指向自己部署的域名，打开时加 <code>?origin=https://你的域名</code>（会记住）。</li>
+      <li><b>部署到 Vercel</b>：<code>douyin-service/</code> 已按 Serverless 形态适配完成，部署后访问自己的域名即可，页面自动同源，不用改任何配置。详见下方「部署到 Vercel」。</li>
+    </ul>
+    <h3>工作方式</h3>
+    <ul>
+      <li><b>输入</b>：粘贴抖音分享口令 / 短链 / 长链，点「解析」。服务端会返回标题、简介、封面、无水印视频地址，以及点赞、评论、转发、收藏等统计数据。</li>
+      <li><b>为什么必须有服务端</b>：① 抖音接口不返回跨域头（CORS），浏览器直连读不到响应；② 分享页只对<b>手机 UA + ttwid Cookie</b> 返回完整数据，缺任一项只拿到 32KB 空壳页面；③ 浏览器禁止网页设置 <code>Cookie</code> / <code>Referer</code> / <code>User-Agent</code> 请求头（设了也会被静默剥离）。这三点都是硬限制，纯前端无解。</li>
+    </ul>
+    <h3>音频提取与视频下载</h3>
+    <ul>
+      <li><b>媒体中转</b>：抖音 CDN 不返回跨域头、浏览器又禁止修改请求头，所以统一经「设置 → 媒体代理」中转取字节（默认指向本机 / 你的解析服务）。拿到的是<b>原始 mp4</b>——既能一键下载原片，也能解码成 16kHz 单声道 WAV 提取音频；</li>
+      <li><b>备用直链</b>：部分作品的主播放地址会失效，自动改用接口返回的备用地址重试；</li>
+      <li><b>分片下载</b>：云平台（Vercel）单次响应体上限 4.5MB，中转会把响应截成 3MB 分片，页面按 <code>Content-Range</code> 循环取全再拼装，字节级无损；</li>
+      <li><b>实在不行</b>：点「下载视频」保存原片后，用任意播放器观看或交给其他转写工具。</li>
+    </ul>
+    <h3>音频转文字</h3>
+    <ul>
+      <li>使用硅基流动 ASR 接口（默认 SenseVoiceSmall，免费），Key 只保存在你自己浏览器的 localStorage 里，不会发送到除硅基流动以外的任何地方。</li>
+    </ul>
+
+    <details>
+      <summary><b>🔧 解析服务说明与自建方式</b></summary>
+      <div style="margin-top:10px;">
+        <p><b>默认服务做什么：</b>接收 <code>/api/parse?url=抖音链接</code> → 跟随短链跳转拿作品 ID → 请求 <code>iesdouyin.com</code> 首页获取 <code>ttwid</code> Cookie → 以<b>手机 UA</b> + <code>Referer</code> + <code>ttwid</code> 请求分享页 → 从 <code>window._ROUTER_DATA</code> 提取作品数据 → 播放地址 <code>playwm</code> 换成 <code>play</code> 得到无水印直链 → 返回标准 JSON。另外提供 <code>/api/media?url=</code> 媒体中转（带 CORS 与 Range，可播放、可下载原片、可提取音频）。</p>
+        <p><b>失败会自动重试：</b>分享页偶发只返回空壳，服务端会换新 ttwid 重试最多 3 次；仍失败则多半是作品已删除或设为私密。</p>
+        <p><b>想自己部署一份？</b>完整 Node 服务源码在项目的 <code>douyin-service/server.js</code>（单文件、零依赖，Node 18+），本地跑 <code>node server.js</code>，或用任意支持 Node 的平台部署，把地址填到「解析接口」＝ <code>https://你的域名/api/parse?url={url}</code>，媒体代理会自动带出 <code>https://你的域名/api/media?url={url}</code>。</p>
+        <pre id="workerCode" style="font-family:var(--mono); font-size:11px; background:#f8f9fb; border:1px solid var(--border); border-radius:8px; padding:12px; overflow:auto; max-height:240px; color:var(--text-2); white-space:pre;">WORKER_CODE_PLACEHOLDER</pre>
+        <button class="btn-ghost" id="copyWorkerBtn" style="margin-top:8px;">复制解析服务配置</button>
+      </div>
+    </details>
+
+    <details>
+      <summary><b>▲ 部署到 Vercel（含网络连通性注意事项）</b></summary>
+      <div style="margin-top:10px;">
+        <p><b>三步上线：</b>① Vercel 导入仓库，<b>Root Directory 填 <code>douyin-service</code></b>；② 不需要任何环境变量、不需要装依赖（零依赖），直接 Deploy；③ 打开 <code>https://你的域名/api/diag</code> 自检，看到 <code>parse.ok: true</code> 就说明这条链路在你这个部署上是通的。</p>
+        <p><b>页面无需任何配置</b>：同源部署时页面用 <code>location.origin</code> 自动指向自己的 API，并且不会带 <code>sharecode</code> 之类只在特定托管网关才需要的参数。</p>
+        <p><b>网络连通性 —— 这是 Vercel 上唯一容易翻车的地方，逐条说明：</b></p>
+        <ul>
+          <li><b>区域（首要因素）</b>：已默认 <code>hkg1</code>（香港）。Vercel 默认区域是 <code>iad1</code>（美东华盛顿），从美东访问抖音要绕行太平洋，延迟 300ms+，而且美东云厂商 IP 段更容易被风控。若 <code>hkg1</code> 也被风控，改 <code>vercel.json</code> 里 <code>regions</code> 一行重新部署即可，按 <code>hkg1（香港）→ sin1（新加坡）→ kix1（大阪）→ iad1（美东）</code> 顺序试（Hobby 计划只允许 1 个区域，只能一个个来；区域在部署时定死，运行时改不了）。</li>
+          <li><b>出口 IP 被风控</b>：典型表现是 HTTP 200 但只返回约 32KB 的空壳页面（<code>_ROUTER_DATA</code> 里没有 <code>item_list</code>）——<b>看起来像成功，实际没数据</b>，这是最坑的一种失败。服务端的对策是「空 cookie 先探 → 收下分享页自己下发的 <code>ttwid</code> → 带上重发 → 仍拿不到就换 Android UA」，最多 5 轮。</li>
+          <li><b>4.5MB 响应体上限（会直接报错的硬限制）</b>：Vercel Serverless 单次响应体最大 4.5MB，而抖音原片常有 3–30MB，整包透传必然 500。媒体中转因此自动把响应截成 <b>3MB 分片</b>，回 <code>Content-Range: bytes 0-3145727/总长</code>，浏览器看到 206 会自动续请求，<code>&lt;video&gt;</code> 播放不受影响；下载侧按分片循环取全再拼装，<b>字节级无损</b>（有 md5 校验测试）。所以「一次下载 = 多次函数调用」是正常的，不是 bug。</li>
+          <li><b>函数超时</b>：<code>maxDuration</code> 已设 60 秒（Hobby 上限），解析内部另压一层 25 秒预算，宁可自己返回结构化报错，也不让平台硬杀成前端看不见原因的 504。</li>
+          <li><b>冷启动</b>：Serverless 没有常驻进程，每次冷启动都要重新取一次 <code>ttwid</code>（多 0.5–1 秒），所以跨请求 cookie 缓存没意义、已去掉；作为补偿，解析成功时会把 cookie 放进 <code>X-Dy-Cookie</code> 响应头交给前端复用，二次请求可省一次往返。</li>
+        </ul>
+        <p class="hint">最稳的方案仍是把 <code>douyin-service/</code> 丢到一台能直连大陆的机器上跑 <code>node server.js</code>——单进程、零依赖。Vercel 版适合「没机器、图省事」的场景。完整部署说明与排错见 <code>douyin-service/README.md</code>；本地部署前可先跑 <code>node dev-vercel.js</code> 模拟 Vercel 环境验证。</p>
+      </div>
+    </details>
+
+    <div class="warnbox">
+      ⚠️ 请仅解析你有权访问的公开内容。下载的视频版权归原作者所有，请勿用于侵权或商业用途；批量抓取请遵守平台规则与相关法律法规。
+    </div>
+  </section>
+
+  <footer>
+    ASR 接口：<code>POST https://api.siliconflow.cn/v1/audio/transcriptions</code> · 无水印地址由分享页数据构造（playwm → play）<br>
+    前端为单文件、无追踪；链接解析由 <code>douyin-service</code>（Node，零依赖）完成，源码可直接自建。
+  </footer>
+</div>
+
+<!-- Worker 源码（text/plain 避免转义问题） -->
+<script type="text/plain" id="workerSrc">接口契约（本工具自带的解析服务即按此实现）
+
+  GET  {服务地址}/api/parse?url={抖音链接}
+       -> { "code": 0, "data": {
+              "aweme_id": "7699401710581697826",
+              "type": "video",                 // video | images
+              "title": "作品文案…",
+              "author": "极目新闻",
+              "cover": "https://…",            // 封面直链
+              "video_url": "https://aweme.snssdk.com/aweme/v1/play/?…",
+              "video_url_backup": "https://…", // 备用播放地址
+              "duration": 16400,               // 毫秒
+              "width": 1080, "height": 1920,
+              "create_time": 1792656661,       // 秒
+              "statistics": { "digg": 86306, "comment": 43818, "share": 30916, "collect": 13443 },
+              "music": { "title": "…", "author": "…", "url": "" }
+            } }
+       -> 失败时 { "code": 500, "message": "原因" }
+
+  GET  {服务地址}/api/media?url={媒体直链}
+       -> 原样回源字节，带 CORS 与 Range（可播放 / 可下载 / 可解码音频）
+
+  GET  {服务地址}/api/health
+       -> { "ok": true, "uptime": 秒 }
+
+自己部署一份：项目内 douyin-service/server.js 是单文件零依赖的 Node 服务（Node 18+），
+本机 node server.js 即可；也可放到任意 Node 平台（PORT 环境变量指定端口）。
+拿到地址后填「解析接口」= https://你的域名/api/parse?url={url}
+媒体代理会自动同步为 https://你的域名/api/media?url={url}
+
+关键技术点（缺任一项都拿不到数据）：
+  1. 先 GET https://www.iesdouyin.com/ 取 Set-Cookie 里的 ttwid
+  2. 以「手机 UA」+ Referer: https://www.iesdouyin.com/ + Cookie: ttwid=… 
+     请求 https://www.iesdouyin.com/share/video/{作品ID}/
+  3. 从返回 HTML 里抠出 window._ROUTER_DATA（括号配平解析，不能正则）
+  4. loaderData["video_(id)/page"].videoInfoRes.item_list[0] 即作品数据
+  5. play_addr.url_list[0] 里的 playwm 换成 play → 无水印直链</script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 配置与状态 ================= */
+  var LS = {
+    key: 'dousnap_asr_key', model: 'dousnap_asr_model',
+    parseApi: 'dousnap_parse_api2', ttwid: 'dousnap_ttwid',
+    proxies: 'dousnap_proxies', customProxy: 'dousnap_custom_proxy',
+    mediaProxy: 'dousnap_media_proxy2'
+  };
+  var DEFAULT_TTWID = '1%7CbS6wlmbL3C3KfC_7_3zwz3fFS5xYdz3yQPMsU79JVuI%7C1792912353%7C2e59782017a32ac7974e07dc9a735e003576d951c8c1643d6e3ec0fc665abdb9';
+  var MOBILE_UA_HINT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
+
+  /* ---- 默认解析服务地址 ----
+     三种打开方式：
+       1. http(s) 打开（本机 node server.js / Vercel / 自托管） -> 用 location.origin（同源，最可靠）
+       2. 本地 file:// 双击打开                                -> 用下面的兜底地址（本机服务）
+       3. 想把本地文件指向自己部署的域名                        -> 打开时加 ?origin=https://xxx.vercel.app
+     兜底地址在「设置」里也能改（解析接口 / 媒体代理两项），换成自己的即可。 */
+  var FALLBACK_ORIGIN = 'http://127.0.0.1:3000';
+  var FALLBACK_SHARECODE = '';
+
+  // ?origin=https://xxx.vercel.app 优先，其次 localStorage 记住的
+  function manualOrigin() {
+    try {
+      var q = new URLSearchParams(location.search).get('origin');
+      if (q) {
+        var n = String(q).replace(/\/+$/, '');
+        localStorage.setItem('dousnap_origin', n);
+        return n;
+      }
+      var saved = localStorage.getItem('dousnap_origin');
+      if (saved) return String(saved).replace(/\/+$/, '');
+    } catch (e) { /* file:// 下 URLSearchParams 可用，localStorage 也可能受限 */ }
+    return '';
+  }
+
+  function serviceOrigin() {
+    // 通过 http(s) 访问时（Vercel / 自托管 / 本机 node）同源最可靠
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      return location.origin;
+    }
+    // file:// 直接打开：优先用户显式指定，其次兜底地址
+    var manual = manualOrigin();
+    if (manual) return manual;
+    var o = FALLBACK_ORIGIN || '';
+    if (!o || o.indexOf('__SERVICE_ORIGIN__') >= 0) return '';
+    return String(o).replace(/\/+$/, '');
+  }
+
+  /* sharecode 是 WorkBuddy 托管网关的放行参数，只有那个域名需要；
+     部署到 Vercel / 自己的服务器时绝不能带，否则是多余且易误导的参数。 */
+  function sharecodeQuery() {
+    var o = serviceOrigin();
+    if (o.indexOf('.workbuddy.host') < 0) return '';
+    var sc = window.__INJECTED_SHARECODE__;
+    if (sc === undefined) sc = FALLBACK_SHARECODE;
+    return sc ? '&sharecode=' + encodeURIComponent(sc) : '';
+  }
+  function defaultParseApi() {
+    var o = serviceOrigin();
+    return o ? o + '/api/parse?url={url}' + sharecodeQuery() : '';
+  }
+  function defaultMediaProxy() {
+    var o = serviceOrigin();
+    return o ? o + '/api/media?url={url}' + sharecodeQuery() : '';
+  }
+  /* 把原始媒体地址包成媒体中转地址（无配置时原样返回） */
+  function wrapMedia(u) {
+    if (!u) return '';
+    var tpl = els && els.mediaProxy ? els.mediaProxy.value.trim() : '';
+    if (!tpl) return u;
+    if (/\/api\/media\?/.test(u) || /[?&]media=/.test(u)) return u;
+    return tpl.replace(/\{url\}/g, encodeURIComponent(u));
+  }
+
+  var state = {
+    current: null,          // 当前媒体对象
+    audioBlob: null,        // 已提取的音频
+    audioInfo: null,
+    abortFlag: false
+  };
+
+  /* ================= DOM ================= */
+  function $(id) { return document.getElementById(id); }
+  var els = {
+    settingsCard: $('settingsCard'), settingsDetails: $('settingsDetails'), settingsToggle: $('settingsToggle'),
+    asrKey: $('asrKey'), toggleKeyBtn: $('toggleKeyBtn'), asrModel: $('asrModel'),
+    parseApi: $('parseApi'), customProxy: $('customProxy'), ttwid: $('ttwid'), refreshTtwidBtn: $('refreshTtwidBtn'),
+    mediaProxy: $('mediaProxy'),
+    linkInput: $('linkInput'), parseBtn: $('parseBtn'),
+    steps: $('steps'), errorBox: $('errorBox'), statusLine: $('statusLine'),
+    resultCard: $('resultCard'), resultSource: $('resultSource'),
+    coverImg: $('coverImg'), downloadCoverBtn: $('downloadCoverBtn'),
+    titleText: $('titleText'), descText: $('descText'), chips: $('chips'),
+    videoPlayer: $('videoPlayer'),
+    downloadVideoBtn: $('downloadVideoBtn'), downloadAudioBtn: $('downloadAudioBtn'), transcribeBtn: $('transcribeBtn'),
+    audioWrap: $('audioWrap'), audioPlayer: $('audioPlayer'),
+    transcriptBox: $('transcriptBox'), transcriptText: $('transcriptText'),
+    copyTranscriptBtn: $('copyTranscriptBtn'), downloadTranscriptBtn: $('downloadTranscriptBtn'),
+    rawJson: $('rawJson')
+  };
+
+  /* ================= 工具 ================= */
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(2) + ' MB';
+  }
+  function fmtDuration(sec) {
+    if (!isFinite(sec)) return '未知';
+    var m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return (m > 0 ? m + ':' : '') + (s < 10 && m > 0 ? '0' : '') + s + 's';
+  }
+  function fmtDurationMs(ms) { return isFinite(ms) ? fmtDuration(ms / 1000) : '未知'; }
+  function fmtTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function setStatus(html) { els.statusLine.innerHTML = html; }
+  function showError(html) {
+    els.errorBox.innerHTML = '<div class="alert alert-error">' + escapeHtml(html) + '</div>';
+    setStatus('');
+  }
+  function showWarn(html) {
+    els.errorBox.innerHTML = '<div class="alert alert-warn">' + escapeHtml(html) + '</div>';
+  }
+  function showInfo(html) {
+    els.errorBox.innerHTML = '<div class="alert alert-info">' + escapeHtml(html) + '</div>';
+  }
+  function clearMessages() { els.errorBox.innerHTML = ''; setStatus(''); }
+
+  /* 步骤条 */
+  function addStep(text, cls) {
+    var div = document.createElement('div');
+    div.className = 'step ' + (cls || '');
+    div.innerHTML = '<span class="dot">' + (cls === 'ok' ? '✓' : cls === 'fail' ? '✕' : cls === 'run' ? '…' : '·') + '</span><span class="txt">' + escapeHtml(text) + '</span>';
+    els.steps.appendChild(div);
+    return div;
+  }
+  function clearSteps() { els.steps.innerHTML = ''; }
+  function finishStep(div, ok, text) {
+    div.className = 'step ' + (ok ? 'ok' : 'fail');
+    div.querySelector('.dot').textContent = ok ? '✓' : '✕';
+    if (text) div.querySelector('.txt').textContent = text;
+  }
+
+  function flash(btn, text) {
+    var old = btn.textContent;
+    btn.textContent = text;
+    setTimeout(function () { btn.textContent = old; }, 1200);
+  }
+
+  /* ================= 设置持久化 ================= */
+  function loadSettings() {
+    els.asrKey.value = localStorage.getItem(LS.key) || '';
+    var m = localStorage.getItem(LS.model);
+    if (m) els.asrModel.value = m;
+    els.parseApi.value = localStorage.getItem(LS.parseApi) || defaultParseApi();
+    els.mediaProxy.value = localStorage.getItem(LS.mediaProxy) || defaultMediaProxy();
+    els.ttwid.value = localStorage.getItem(LS.ttwid) || '';
+    var proxies = JSON.parse(localStorage.getItem(LS.proxies) || 'null') || ['direct', 'allorigins', 'codetabs'];
+    document.querySelectorAll('.proxyCb').forEach(function (cb) {
+      cb.checked = proxies.indexOf(cb.value) >= 0;
+      if (cb.value === 'custom') els.customProxy.classList.toggle('hidden', !cb.checked);
+    });
+    els.customProxy.value = localStorage.getItem(LS.customProxy) || '';
+    updateApiBadge();
+  }
+  function updateApiBadge() {
+    var badge = document.getElementById('apiBadge');
+    if (!badge) return;
+    var v = els.parseApi.value.trim();
+    badge.style.display = v ? 'inline-block' : 'none';
+    if (v) {
+      var isDefault = v === defaultParseApi();
+      badge.textContent = isDefault ? '● 已启用（内置服务）' : '● 自定义接口';
+    }
+  }
+  function saveSettings() {
+    localStorage.setItem(LS.key, els.asrKey.value.trim());
+    localStorage.setItem(LS.model, els.asrModel.value);
+    // 等于默认值时不落盘，这样换服务地址后不会被旧值钉住
+    var pa = els.parseApi.value.trim();
+    localStorage.setItem(LS.parseApi, pa === defaultParseApi() ? '' : pa);
+    var mp = els.mediaProxy.value.trim();
+    localStorage.setItem(LS.mediaProxy, mp === defaultMediaProxy() ? '' : mp);
+    localStorage.setItem(LS.ttwid, els.ttwid.value.trim());
+    var proxies = [];
+    document.querySelectorAll('.proxyCb').forEach(function (cb) { if (cb.checked) proxies.push(cb.value); });
+    localStorage.setItem(LS.proxies, JSON.stringify(proxies));
+    localStorage.setItem(LS.customProxy, els.customProxy.value.trim());
+    updateApiBadge();
+  }
+  [els.asrKey, els.asrModel, els.parseApi, els.ttwid, els.customProxy, els.mediaProxy].forEach(function (el) {
+    el.addEventListener('input', saveSettings);
+  });
+  // 解析接口变化时自动带出对应的媒体代理地址
+  els.parseApi.addEventListener('input', function () {
+    var v = els.parseApi.value.trim();
+    var derived = '';
+    var mNew = v.match(/^(https?:\/\/[^\s?]+)\/api\/parse\?([\s\S]+)$/);
+    var mOld = v.match(/^(https?:\/\/[^\s?]+)\?(?:url=)\{url\}$/);
+    if (mNew) derived = mNew[1] + '/api/media?' + mNew[2];
+    else if (mOld) derived = mOld[1] + '?media={url}';
+    if (derived) {
+      var cur = els.mediaProxy.value.trim();
+      var ours = /\/api\/media\?url=/.test(cur);
+      if (!cur || cur === defaultMediaProxy() || ours || /^(https?:\/\/[^\s?]+)\?media=\{url\}$/.test(cur)) {
+        els.mediaProxy.value = derived;
+      }
+    }
+    saveSettings();
+    updateApiBadge();
+  });
+  var resetApiBtn = document.getElementById('resetApiBtn');
+  if (resetApiBtn) resetApiBtn.addEventListener('click', function () {
+    els.parseApi.value = defaultParseApi();
+    els.mediaProxy.value = defaultMediaProxy();
+    saveSettings();
+    showInfo('已恢复为内置解析服务。');
+  });
+  document.querySelectorAll('.proxyCb').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      if (cb.value === 'custom') els.customProxy.classList.toggle('hidden', !cb.checked);
+      saveSettings();
+    });
+  });
+  els.settingsToggle.addEventListener('click', function () {
+    els.settingsDetails.open = !els.settingsDetails.open;
+    els.settingsDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  els.toggleKeyBtn.addEventListener('click', function () {
+    var show = els.asrKey.type === 'password';
+    els.asrKey.type = show ? 'text' : 'password';
+    els.toggleKeyBtn.textContent = show ? '隐藏' : '显示';
+  });
+
+  /* ================= 链接输入解析 ================= */
+  function extractUrlFromText(text) {
+    var m = String(text || '').match(/https?:\/\/[^\s，。；,!<>"'\]\)】]+/);
+    return m ? m[0] : null;
+  }
+  function extractAwemeId(url) {
+    var m = url.match(/\/video\/(\d{15,25})/) || url.match(/\/share\/video\/(\d{15,25})/);
+    if (m) return m[1];
+    m = url.match(/modal_id=(\d{15,25})/);
+    if (m) return m[1];
+    return null;
+  }
+  function isDouyinUrl(url) {
+    return /(^|\.)(douyin\.com|iesdouyin\.com|amemv\.com)/i.test(url) || /v\.douyin\.com/i.test(url);
+  }
+
+  /* 代理模板 */
+  var PROXY_TEMPLATES = {
+    direct: function (u) { return u; },
+    allorigins: function (u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
+    codetabs: function (u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); },
+    corsproxy: function (u) { return 'https://corsproxy.io/?url=' + encodeURIComponent(u); },
+    custom: null
+  };
+  function getActiveProxies() {
+    var out = [];
+    document.querySelectorAll('.proxyCb').forEach(function (cb) {
+      if (!cb.checked) return;
+      if (cb.value === 'custom') {
+        var tpl = els.customProxy.value.trim();
+        if (tpl) out.push({ name: '自定义代理', fn: function (u) { return tpl.indexOf('{url}') >= 0 ? tpl.replace('{url}', encodeURIComponent(u)) : tpl + u; } });
+      } else {
+        out.push({ name: cb.value, fn: PROXY_TEMPLATES[cb.value] });
+      }
+    });
+    return out;
+  }
+
+  /* ================= 分享页解析（核心） ================= */
+  function extractRouterData(html) {
+    var marker = 'window._ROUTER_DATA = ';
+    var idx = html.indexOf(marker);
+    var start = idx >= 0 ? idx + marker.length : -1;
+    if (start < 0) {
+      idx = html.indexOf('_ROUTER_DATA');
+      if (idx < 0) return null;
+      var eq = html.indexOf('=', idx);
+      if (eq < 0) return null;
+      start = eq + 1;
+    }
+    while (start < html.length && /\s/.test(html[start])) start++;
+    if (html[start] !== '{') return null;
+    var depth = 0, inStr = false, esc = false;
+    for (var i = start; i < html.length; i++) {
+      var c = html[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) {
+          try { return JSON.parse(html.slice(start, i + 1)); } catch (e) { return null; }
+        }
+      }
+    }
+    return null;
+  }
+
+  function walkFind(obj, found) {
+    if (Array.isArray(obj)) { obj.forEach(function (v) { walkFind(v, found); }); return; }
+    if (!obj || typeof obj !== 'object') return;
+    var urlList = obj.url_list;
+    if (Array.isArray(urlList) && urlList.length) {
+      var urls = urlList.filter(function (u) { return typeof u === 'string' && u; });
+      if (urls.some(function (u) { return u.indexOf('play') >= 0; })) found.playUrls.push.apply(found.playUrls, urls);
+    }
+    if (typeof obj.uri === 'string' && !found.videoUri && /^v[0-9a-f]+$/.test(obj.uri)) found.videoUri = obj.uri;
+    if (typeof obj.desc === 'string' && !found.desc) found.desc = obj.desc;
+    if (typeof obj.nickname === 'string' && !found.nickname) found.nickname = obj.nickname;
+    if (typeof obj.signature === 'string' && !found.authorSig) found.authorSig = obj.signature;
+    Object.keys(obj).forEach(function (k) { walkFind(obj[k], found); });
+  }
+
+  function buildPlayUrl(uri, template) {
+    if (template) {
+      var m = template.match(/(https?:\/\/[^/]+\/aweme\/v1\/play(?:wm)?\/)/);
+      if (m) {
+        var prefix = m[1].replace('playwm', 'play');
+        var extra = '';
+        var em = template.match(/&(line=\d+)/);
+        if (em) extra = '&' + em[1];
+        var rm = template.match(/ratio=([a-z0-9]+)/i);
+        var ratio = rm ? rm[1] : '720p';
+        return prefix + '?line=0&logo_name=aweme_diversion_search&ratio=' + ratio + '&video_id=' + uri + extra;
+      }
+    }
+    return 'https://aweme.snssdk.com/aweme/v1/play/?line=0&logo_name=aweme_diversion_search&ratio=720p&video_id=' + uri;
+  }
+
+  function parseSharePageHtml(html) {
+    var data = extractRouterData(html);
+    if (!data) return null;
+    var found = { playUrls: [], videoUri: null, desc: null, nickname: null, authorSig: null };
+    walkFind(data, found);
+    // 定位 item 节点拿更完整的字段
+    var item = null;
+    (function find(o) {
+      if (item || !o || typeof o !== 'object') return;
+      if (Array.isArray(o)) { o.forEach(find); return; }
+      if (o.aweme_id && (o.video || o.images)) { item = o; return; }
+      Object.keys(o).forEach(function (k) { find(o[k]); });
+    })(data);
+    if (!item) return null;
+
+    var res = {
+      awemeId: String(item.aweme_id || ''),
+      title: item.desc || found.desc || '',
+      author: (item.author && item.author.nickname) || found.nickname || '',
+      authorSig: (item.author && item.author.signature) || found.authorSig || '',
+      cover: pickUrl(item.video && item.video.cover) || pickUrl(item.origin_cover) || '',
+      videoUrl: '',
+      duration: item.video && item.video.duration,
+      width: item.video && item.video.width,
+      height: item.video && item.video.height,
+      createTime: item.create_time,
+      statistics: item.statistics || null,
+      music: item.music ? { title: item.music.title || '', author: (item.music.author || '') } : null,
+      images: [],
+      raw: data
+    };
+    if (item.video && item.video.play_addr) {
+      var tpl = pickUrl(item.video.play_addr);
+      res.videoUrl = buildPlayUrl(item.video.play_addr.uri || found.videoUri, tpl);
+    }
+    if (!res.videoUrl && found.videoUri) res.videoUrl = buildPlayUrl(found.videoUri, found.playUrls[0]);
+    // 图集
+    if (!res.videoUrl && Array.isArray(item.images) && item.images.length) {
+      res.images = item.images.map(function (im) { return pickUrl(im) || (im.url_list && im.url_list[0]); }).filter(Boolean);
+    }
+    return res;
+  }
+  function pickUrl(node) {
+    if (!node) return '';
+    if (Array.isArray(node.url_list) && node.url_list.length) return node.url_list[0];
+    if (typeof node === 'string') return node;
+    return '';
+  }
+
+  /* ================= 解析 API 适配 ================= */
+  // 统一成 { awemeId,title,author,cover,videoUrl,duration,width,height,createTime,statistics,music,images,raw }
+  function pickStats(src) {
+    if (!src) return null;
+    var s = {
+      digg_count: src.digg_count != null ? src.digg_count : (src.digg != null ? src.digg : null),
+      comment_count: src.comment_count != null ? src.comment_count : (src.comment != null ? src.comment : null),
+      share_count: src.share_count != null ? src.share_count : (src.share != null ? src.share : null),
+      collect_count: src.collect_count != null ? src.collect_count : (src.collect != null ? src.collect : null)
+    };
+    if (s.digg_count == null && s.comment_count == null && s.share_count == null && s.collect_count == null) return null;
+    return s;
+  }
+
+  function normalizeApiResult(data) {
+    // 兼容：{code:0,data:{...}} / {data:{...}} / 平铺对象 / 抖音原始 aweme_detail
+    var d = (data && data.data && typeof data.data === 'object') ? data.data : data;
+    var item = d.item || d.aweme_detail || d;
+    var video = item.video || d.video || {};
+    var res = {
+      awemeId: String(item.aweme_id || d.aweme_id || d.awemeId || d.id || ''),
+      title: d.title || item.desc || d.desc || '',
+      desc: d.desc || item.desc || d.title || '',
+      author: (item.author && item.author.nickname) || (d.author && d.author.nickname) || (typeof d.author === 'string' ? d.author : '') || d.nickname || '',
+      cover: d.cover || pickUrl(item.cover || item.origin_cover) || '',
+      videoUrl: '',
+      videoUrlBackup: d.video_url_backup || d.backup_url || '',
+      type: d.type || '',
+      duration: d.duration || video.duration,
+      width: d.width || video.width,
+      height: d.height || video.height,
+      createTime: d.create_time || item.create_time,
+      statistics: pickStats(d.statistics || item.statistics),
+      music: d.music || null,
+      images: Array.isArray(d.images) ? d.images.filter(function (x) { return typeof x === 'string' && x; }) : [],
+      raw: data
+    };
+    var url = d.video_url || d.url || d.play || (video.play_addr && pickUrl(video.play_addr)) || (video.play && pickUrl(video.play));
+    if (url) {
+      res.videoUrl = url.replace('/aweme/v1/playwm/', '/aweme/v1/play/').replace('playwm?', 'play?');
+    }
+    if (!res.videoUrl && video.play_addr && video.play_addr.uri) {
+      res.videoUrl = buildPlayUrl(video.play_addr.uri, pickUrl(video.play_addr));
+    }
+    if (!res.videoUrl && !res.images.length && Array.isArray(item.images)) {
+      res.images = item.images.map(function (im) { return pickUrl(im) || (im.url_list && im.url_list[0]); }).filter(Boolean);
+    }
+    // 音乐直链
+    if (!res.music && item.music) {
+      res.music = { title: item.music.title || '', author: item.music.author || '' };
+    }
+    return res;
+  }
+
+  /* ================= 主解析流程 ================= */
+  els.parseBtn.addEventListener('click', runLinkParse);
+  els.linkInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') runLinkParse();
+  });
+
+  async function callParseApi(apiTpl, url, awemeId, stepEl) {
+    var apiUrl = apiTpl.replace(/\{url\}/g, encodeURIComponent(url)).replace(/\{id\}/g, awemeId || '');
+    var ctrl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    try {
+      var resp = await fetch(apiUrl, ctrl ? { signal: ctrl.signal } : undefined);
+      if (!resp.ok) throw new Error('接口返回 HTTP ' + resp.status);
+      var text = await resp.text();
+      var data;
+      try { data = JSON.parse(text); }
+      catch (e) {
+        throw new Error('接口未返回 JSON（前 80 字符：' + text.slice(0, 80).replace(/\s+/g, ' ') + '）');
+      }
+      // 服务端业务错误码
+      if (data && data.code != null && data.code !== 0 && !data.data) {
+        throw new Error(data.message || ('接口返回错误码 ' + data.code));
+      }
+      var res = normalizeApiResult(data);
+      if (!res.videoUrl && !res.images.length) throw new Error(data && data.message ? data.message : '返回数据中找不到视频地址');
+      return res;
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('请求超时（45 秒），解析服务可能繁忙，请重试');
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function runLinkParse() {
+    clearMessages(); clearSteps(); hideResult();
+    var text = els.linkInput.value.trim();
+    if (!text) { showError('请先粘贴抖音链接或分享口令。'); return; }
+    var url = extractUrlFromText(text);
+    if (!url) { showError('没有在输入中找到链接。请粘贴完整的分享口令或链接。'); return; }
+    if (!isDouyinUrl(url)) { showError('这不是抖音域名链接（支持 douyin.com / iesdouyin.com / v.douyin.com）。'); return; }
+
+    els.parseBtn.disabled = true;
+    state.abortFlag = false;
+    try {
+      var awemeId = extractAwemeId(url);
+      addStep('识别链接：' + (awemeId ? '作品 ID ' + awemeId : url.slice(0, 60) + (url.length > 60 ? '…' : '')), 'ok');
+
+      var result = null;
+      var apiTpl = els.parseApi.value.trim();
+      var apiErr = '';
+
+      // Tier 1: 解析接口（默认指向内置在线服务）
+      if (apiTpl) {
+        var s = addStep('请求解析服务…', 'run');
+        try {
+          result = await callParseApi(apiTpl, url, awemeId, s);
+          finishStep(s, true, '解析成功：' + (result.author ? '「' + result.author + '」' : '') + (result.title ? ' ' + result.title.slice(0, 30) + '…' : ''));
+        } catch (e) {
+          apiErr = e.message;
+          finishStep(s, false, '解析服务失败：' + e.message);
+        }
+      } else {
+        addStep('未配置解析接口，跳过', 'fail');
+      }
+
+      // Tier 2: 兜底 —— 公共代理 + 分享页（抖音场景基本无效，仅在用户自行配置了可用代理时有用）
+      if (!result) {
+        var shareUrl = awemeId ? ('https://www.iesdouyin.com/share/video/' + awemeId + '/') : url;
+        var ttwid = els.ttwid.value.trim() || DEFAULT_TTWID;
+        var proxies = getActiveProxies();
+        if (proxies.length) {
+          for (var i = 0; i < proxies.length && !result; i++) {
+            var p = proxies[i];
+            var st = addStep('兜底：「' + p.name + '」请求分享页…', 'run');
+            try {
+              var headers = {
+                'X-Dousnap-Cookie': 'ttwid=' + ttwid,
+                'X-Dousnap-Referer': 'https://www.iesdouyin.com/',
+                'X-Dousnap-Ua': MOBILE_UA_HINT
+              };
+              var r2 = await fetch(p.fn(shareUrl), { headers: headers });
+              if (!r2.ok) throw new Error('HTTP ' + r2.status);
+              var html = await r2.text();
+              if (html.length < 2000) throw new Error('返回内容过短（' + html.length + ' 字节），代理未透传手机 UA / ttwid');
+              result = parseSharePageHtml(html);
+              if (!result) throw new Error('页面中未找到视频数据');
+              if (!result.videoUrl && !result.images.length) throw new Error('数据中无视频地址');
+              finishStep(st, true, '「' + p.name + '」解析成功');
+            } catch (e) {
+              finishStep(st, false, '「' + p.name + '」失败：' + e.message);
+            }
+          }
+        }
+      }
+
+      if (!result) {
+        var tips = '链接解析失败。' + (apiErr ? '\n\n解析服务返回：' + apiErr : '');
+        tips += '\n\n可能原因：\n' +
+          '1. 解析服务暂时不可用或网络不通 —— 检查能否在浏览器打开解析服务地址；本机服务是否已启动（http://127.0.0.1:3000）；设置里点「恢复默认」重试；\n' +
+          '2. 作品已删除、设为私密，或链接不完整；\n' +
+          '3. 抖音风控（分享页临时只给空壳）—— 稍等几十秒再点一次，服务端会自动换 ttwid 重试。';
+        showError(tips);
+        return;
+      }
+
+      // 图集提示
+      renderResult(result);
+      if (result.images && result.images.length) {
+        showInfo('该作品是图集（共 ' + result.images.length + ' 张）。图片地址见下方原始数据；视频下载/转文字对图集不适用。');
+      }
+    } finally {
+      els.parseBtn.disabled = false;
+    }
+  }
+
+  /* ================= 结果渲染 ================= */
+  function hideResult() {
+    els.resultCard.classList.add('hidden');
+    state.current = null;
+    state.audioBlob = null;
+    state.audioInfo = null;
+    els.transcriptBox.classList.add('hidden');
+    els.transcriptText.value = '';
+    els.audioPlayer.removeAttribute('src');
+    els.audioWrap.classList.add('hidden');
+  }
+
+  function renderResult(res) {
+    state.current = res;
+    state.audioBlob = null;
+    els.resultCard.classList.remove('hidden');
+    els.resultSource.textContent = '来源：链接解析';
+
+    els.titleText.textContent = res.title || '（无标题）';
+    els.descText.textContent = res.desc || res.title || '（无简介）';
+    if (res.cover) {
+      els.coverImg.src = res.cover;
+      els.coverImg.style.display = '';
+      els.downloadCoverBtn.classList.remove('hidden');
+    } else {
+      els.coverImg.removeAttribute('src');
+      els.coverImg.style.display = 'none';
+      els.downloadCoverBtn.classList.add('hidden');
+    }
+
+    var chips = [];
+    if (res.author) chips.push('作者 <b>' + escapeHtml(res.author) + '</b>');
+    if (res.duration) chips.push('时长 <b>' + fmtDurationMs(res.duration) + '</b>');
+    if (res.width && res.height) chips.push('分辨率 <b>' + res.width + '×' + res.height + '</b>');
+    if (res.createTime) chips.push('发布 <b>' + fmtTime(res.createTime) + '</b>');
+    if (res.statistics) {
+      var st = res.statistics;
+      if (st.digg_count != null) chips.push('👍 <b>' + st.digg_count + '</b>');
+      if (st.comment_count != null) chips.push('💬 <b>' + st.comment_count + '</b>');
+      if (st.share_count != null) chips.push('↗ <b>' + st.share_count + '</b>');
+      if (st.collect_count != null) chips.push('⭐ <b>' + st.collect_count + '</b>');
+    }
+    if (res.music && res.music.title) chips.push('🎵 <b>' + escapeHtml(res.music.title) + '</b>');
+    els.chips.innerHTML = chips.join('');
+
+    els.videoPlayer.src = wrapMedia(res.videoUrl) || '';
+    els.videoPlayer.load();
+    els.videoPlayer.preload = 'metadata';
+    els.audioWrap.classList.add('hidden');
+    els.transcriptBox.classList.add('hidden');
+    els.transcriptText.value = '';
+
+    // 图集
+    if (res.images && res.images.length) {
+      els.videoPlayer.removeAttribute('src');
+      showInfo('该作品是图集（共 ' + res.images.length + ' 张），已在下方的 JSON 数据中提供原图地址。本工具以视频处理为主。');
+    }
+
+    els.rawJson.textContent = JSON.stringify(res.raw || res, null, 2);
+    els.resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ================= 下载 ================= */
+  function safeFileName(name, fallback) {
+    var n = String(name || '').replace(/[\\/:*?"<>|\n\r\t]/g, ' ').trim().slice(0, 60);
+    return n || fallback;
+  }
+  function anchorDownload(url, filename) {
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function blobDownload(blob, filename) {
+    var u = URL.createObjectURL(blob);
+    anchorDownload(u, filename);
+    setTimeout(function () { URL.revokeObjectURL(u); }, 30000);
+  }
+
+  els.downloadVideoBtn.addEventListener('click', function () { downloadVideo(); });
+
+  async function downloadVideo() {
+    var cur = state.current;
+    if (!cur || !cur.videoUrl) return;
+    clearMessages();
+    els.downloadVideoBtn.disabled = true;
+    var name = safeFileName((cur.title || '').replace(/\.[^.]+$/, ''), 'douyin_' + (cur.awemeId || 'video'));
+    try {
+      // 路径 1：媒体中转 / 允许跨域 → 取字节后下载（保留原始 mp4，不转码）
+      // 中转在云平台上会把响应截成 3MB 分片（4.5MB 平台上限），所以按 Range 循环取全
+      try {
+        setStatus('<span class="spinner"></span>正在下载视频文件…');
+        var target = wrapMedia(cur.videoUrl);
+        var ab = await fetchMediaAll(target, function (got, total) {
+          setStatus(
+            '<span class="spinner"></span>正在下载视频 ' + fmtSize(got) +
+            (total ? ' / ' + fmtSize(total) + '（' + Math.round((got / total) * 100) + '%）' : '') + '…'
+          );
+        });
+        var blob = new Blob([ab], { type: 'video/mp4' });
+        if (blob.size < 1024) throw new Error('返回内容异常（' + blob.size + ' 字节）');
+        blobDownload(blob, name + '.mp4');
+        setStatus('视频已保存（' + fmtSize(blob.size) + '，原始 mp4，无水印）。');
+        return;
+      } catch (e) { /* 继续尝试备用直链 */ }
+      // 路径 2：备用直链（部分作品主地址失效时可换用）
+      if (cur.videoUrlBackup && cur.videoUrlBackup !== cur.videoUrl) {
+        try {
+          setStatus('<span class="spinner"></span>主地址失败，改用备用地址…');
+          var bab = await fetchMediaAll(wrapMedia(cur.videoUrlBackup));
+          var bblob = new Blob([bab], { type: 'video/mp4' });
+          if (bblob.size < 1024) throw new Error('返回内容异常');
+          blobDownload(bblob, name + '.mp4');
+          setStatus('视频已保存（' + fmtSize(bblob.size) + '，备用地址）。');
+          return;
+        } catch (e) { /* 继续 */ }
+      }
+      // 路径 3：都无法读取 —— 新标签页打开，右键另存为
+      window.open(cur.videoUrl, '_blank');
+      showInfo('已在新标签页打开视频。无水印原片无法被网页直接保存（跨域限制），请在视频画面上右键 → 「视频另存为」。\n\n想一键保存：在「设置 → 媒体代理」填入中转地址（默认已指向内置解析服务，若为空请点「恢复默认」）。');
+    } catch (e) {
+      showError('下载失败：' + e.message + '\n\n可在视频画面上右键选择「视频另存为」保存原始文件。');
+    } finally {
+      els.downloadVideoBtn.disabled = false;
+    }
+  }
+
+  els.downloadCoverBtn.addEventListener('click', function () {
+    var cur = state.current;
+    if (!cur || !cur.cover) return;
+    blobDownloadViaFetch(cur.cover, safeFileName(cur.title, 'cover') + '_cover.jpg');
+  });
+
+  async function blobDownloadViaFetch(url, filename) {
+    try {
+      var resp = await fetch(url);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var blob = await resp.blob();
+      blobDownload(blob, filename);
+    } catch (e) {
+      // 封面 CDN 一般允许直接导航下载
+      anchorDownload(url, filename);
+      showInfo('直接下载已触发；若未开始，可在封面图上右键「图片另存为」。');
+    }
+  }
+
+  /* ================= 音频提取（双通道） ================= */
+  els.downloadAudioBtn.addEventListener('click', function () { extractAudio(false); });
+  els.transcribeBtn.addEventListener('click', function () { extractAudio(true); });
+
+  async function extractAudio(forTranscribe) {
+    var cur = state.current;
+    if (!cur) return;
+    clearMessages();
+    if (state.audioBlob) {
+      if (forTranscribe) runTranscribe(state.audioBlob);
+      else blobDownload(state.audioBlob, safeFileName((cur.title || '').replace(/\.[^.]+$/, ''), 'audio') + (state.audioInfo.indexOf('WebM') >= 0 ? '.webm' : '.wav'));
+      return;
+    }
+    setStatus('<span class="spinner"></span>正在提取音频…');
+    var btn = forTranscribe ? els.transcribeBtn : els.downloadAudioBtn;
+    btn.disabled = true;
+    var blob = null;
+    try {
+      if (!cur.videoUrl) throw new Error('当前结果没有可用的视频地址');
+      // 经媒体中转直接取字节（抖音 CDN 无跨域头，这条是正解）
+      var target = wrapMedia(cur.videoUrl);
+      var isProxied = target !== cur.videoUrl;
+      try {
+        setStatus('<span class="spinner"></span>正在获取媒体数据' + (isProxied ? '（经媒体中转）' : '') + '…');
+        blob = await fetchDecodeToWav(target);
+        state.audioInfo = (isProxied ? '媒体中转' : '直读解码') + ' · WAV 16kHz 单声道';
+      } catch (e1) {
+        // 备用直链
+        if (cur.videoUrlBackup) {
+          try {
+            blob = await fetchDecodeToWav(wrapMedia(cur.videoUrlBackup));
+            state.audioInfo = '备用地址直读 · WAV 16kHz 单声道';
+          } catch (e2) { /* 继续 */ }
+        }
+        if (!blob) {
+          throw new Error('无法从该地址提取音频（' + e1.message + '）。\n\n① 检查「设置 → 媒体代理」是否已填（点「恢复默认」可还原中转地址）；\n② 确认解析服务正在运行（本机 http://127.0.0.1:3000）；\n③ 或先点「下载视频」在本地播放，用其他工具转写。');
+        }
+      }
+      if (!blob) throw new Error('没有可提取的音频来源');
+      state.audioBlob = blob;
+      var aurl = URL.createObjectURL(blob);
+      els.audioPlayer.src = aurl;
+      els.audioWrap.classList.remove('hidden');
+      setStatus('音频提取完成：' + fmtSize(blob.size) + '（' + state.audioInfo + '）');
+      if (forTranscribe) {
+        runTranscribe(blob);
+      } else {
+        var ext = state.audioInfo.indexOf('WebM') >= 0 ? 'webm' : 'wav';
+        blobDownload(blob, safeFileName((cur.title || '').replace(/\.[^.]+$/, ''), 'audio') + '.' + ext);
+      }
+    } catch (e) {
+      showError('音频提取失败：' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ================= 媒体字节的完整拉取（Range 分块） =================
+     云平台（Vercel 等）单次响应体只有 4.5MB 上限，所以媒体中转会主动把
+     响应截成 3MB 分片并回 Content-Range（含总长度）。
+     这里按分片循环取全，拼成完整字节 —— 下载原片与解码音频都靠它。
+     若中转不返回 206（自建服务未分片），走一次整包直接返回。 */
+  async function fetchMediaAll(url, onProgress) {
+    var parts = [];
+    var offset = 0;
+    var total = null;
+    var guard = 0;
+
+    while (guard++ < 300) {
+      // 首片也主动带 Range：不依赖「服务端会自行分片」。
+      // 某些网关会把无 Range 请求的 206 改写成 200，去掉 Content-Range，
+      // 那样大文件会被误判成「已取完」。主动请求 Range 可确保拿到 206 + 总长。
+      var headers = { Range: 'bytes=' + offset + '-' };
+      var resp;
+      try {
+        resp = await fetch(url, { headers: headers });
+      } catch (e) {
+        if (offset === 0) throw e;
+        throw new Error('分片请求失败（已下载 ' + fmtSize(offset) + '）：' + e.message);
+      }
+
+      if (!resp.ok) {
+        if (offset === 0) throw new Error('HTTP ' + resp.status);
+        break; // 已有数据，按现有内容继续
+      }
+
+      // 不支持 Range / 未被分片：整包即全部
+      if (resp.status !== 206) {
+        var whole = await resp.arrayBuffer();
+        parts.push(whole);
+        offset += whole.byteLength;
+        break;
+      }
+
+      var cr = resp.headers.get('Content-Range') || '';
+      var m = cr.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/);
+      var buf = await resp.arrayBuffer();
+      if (!buf.byteLength) break;
+
+      parts.push(buf);
+      offset += buf.byteLength;
+
+      if (m) {
+        if (m[3] !== '*') total = parseInt(m[3], 10);
+        if (onProgress) onProgress(offset, total);
+        if (total && offset >= total) break;
+      } else {
+        break; // 没有总长信息，没法判断是否取完，按单片处理
+      }
+
+      // 单片不足预期（上游提前结束）也算完
+      if (buf.byteLength < 1024 && total && offset < total) break;
+    }
+
+    if (!parts.length) throw new Error('未取到任何媒体数据');
+
+    // 只有一片且长度远小于常见视频 -> 可能是空壳
+    if (parts.length === 1 && offset < 1024) {
+      throw new Error('返回内容异常（' + offset + ' 字节）');
+    }
+
+    var out = new Uint8Array(offset);
+    var pos = 0;
+    for (var i = 0; i < parts.length; i++) {
+      out.set(new Uint8Array(parts[i]), pos);
+      pos += parts[i].byteLength;
+    }
+    return out.buffer;
+  }
+
+  /* fetch 媒体字节并解码为 16kHz 单声道 WAV */
+  async function fetchDecodeToWav(url) {
+    var ab = await fetchMediaAll(url, function (got, total) {
+      if (total) {
+        setStatus('<span class="spinner"></span>正在获取媒体数据 ' + fmtSize(got) + ' / ' + fmtSize(total) + '…');
+      }
+    });
+    return decodeToWavBlob(ab);
+  }
+
+  async function decodeToWavBlob(arrayBuffer) {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    var ctx = new Ctx();
+    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) {} }
+    var audioBuf;
+    try {
+      audioBuf = await ctx.decodeAudioData(arrayBuffer);
+    } finally {
+      try { ctx.close(); } catch (e) {}
+    }
+    if (!audioBuf || audioBuf.numberOfChannels === 0) throw new Error('未解码出音轨（可能是静音视频）');
+    var targetRate = 16000;
+    var offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(audioBuf.duration * targetRate)), targetRate);
+    var src = offline.createBufferSource();
+    src.buffer = audioBuf;
+    src.connect(offline.destination);
+    src.start();
+    var rendered = await offline.startRendering();
+    return wavBlob(rendered);
+  }
+
+  function wavBlob(audioBuffer) {
+    var samples = audioBuffer.getChannelData(0);
+    var sampleRate = audioBuffer.sampleRate;
+    var dataLen = samples.length * 2;
+    var ab = new ArrayBuffer(44 + dataLen);
+    var view = new DataView(ab);
+    function wstr(off, s) { for (var i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+    wstr(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true);
+    wstr(8, 'WAVE'); wstr(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    wstr(36, 'data'); view.setUint32(40, dataLen, true);
+    var off = 44;
+    for (var i = 0; i < samples.length; i++) {
+      var s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+    return new Blob([ab], { type: 'audio/wav' });
+  }
+
+  /* ================= 音频转文字 ================= */
+
+  /* 清洗 ASR 输出：SenseVoice 等模型会在正文里插入 🎼 😊 👏 这类情感 / 事件图标，
+     以及 <|zh|><|NEUTRAL|> 这类内部标记。它们对转写内容没有意义，统一去掉。 */
+  function cleanTranscript(s) {
+    if (!s) return s;
+    return String(s)
+      .replace(/<\|[^|]{0,24}\|>/g, '')                      // <|zh|> <|NEUTRAL|> <|Speech|> …
+      .replace(/[\u{1F000}-\u{1FAFF}]/gu, '')                // emoji 主体（🎼 🎵 😊 👏 …）
+      .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, '')                // 区域指示符（国旗）
+      .replace(/[\u{2600}-\u{27BF}]/gu, '')                  // 杂项符号 / Dingbats（✅ ✔ ✂ …）
+      .replace(/[\u{2B00}-\u{2BFF}]/gu, '')                  // 箭头与几何符号
+      .replace(/[\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu, '')  // 变体选择符 / 零宽连接符 / 键帽
+      .replace(/[ \t]{2,}/g, ' ')                            // 删除图标后残留的多余空格
+      .replace(/^[ \t]+|[ \t]+$/gm, '')
+      .trim();
+  }
+
+  async function runTranscribe(blob) {
+    var key = els.asrKey.value.trim();
+    var model = els.asrModel.value;
+    if (!key) {
+      showError('请先在「设置」中填写硅基流动 API Key。');
+      els.settingsDetails.open = true;
+      return;
+    }
+    var cur = state.current;
+    els.transcribeBtn.disabled = true;
+    setStatus('<span class="spinner"></span>正在上传音频并转写（' + fmtSize(blob.size) + '）…');
+    try {
+      var fd = new FormData();
+      var fname = (cur && cur.title ? cur.title.slice(0, 30) : 'audio') + '.' + (blob.type.indexOf('webm') >= 0 ? 'webm' : 'wav');
+      fd.append('model', model);
+      fd.append('file', blob, fname);
+      var resp = await fetch('https://api.siliconflow.cn/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key },
+        body: fd
+      });
+      var data = await resp.json().catch(function () { return null; });
+      if (!resp.ok) {
+        var msg = (data && data.message) || ('HTTP ' + resp.status);
+        throw new Error(msg);
+      }
+      var text = data && typeof data.text === 'string' ? data.text : JSON.stringify(data, null, 2);
+      text = cleanTranscript(text);
+      if (!text.trim()) throw new Error('接口返回空结果（音频可能无人声）');
+      els.transcriptText.value = text;
+      els.transcriptBox.classList.remove('hidden');
+      setStatus('转写完成（模型 ' + model + '）。');
+      els.transcriptBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      showError('转写失败：' + e.message + '\n\n常见原因：Key 无效（复制时缺字符/未实名）、音频格式不支持、网络中断。');
+    } finally {
+      els.transcribeBtn.disabled = false;
+    }
+  }
+
+  els.copyTranscriptBtn.addEventListener('click', function () {
+    els.transcriptText.select();
+    var done = function () { flash(els.copyTranscriptBtn, '已复制'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(els.transcriptText.value).then(done, function () { document.execCommand('copy'); done(); });
+    } else { document.execCommand('copy'); done(); }
+  });
+  els.downloadTranscriptBtn.addEventListener('click', function () {
+    var cur = state.current;
+    blobDownload(new Blob([els.transcriptText.value], { type: 'text/plain;charset=utf-8' }),
+      safeFileName(cur && cur.title, 'transcript') + '_转写.txt');
+    flash(els.downloadTranscriptBtn, '已下载');
+  });
+
+  /* 标题/简介点击复制 */
+  els.titleText.addEventListener('click', function () { copyText(els.titleText.textContent); flash(els.titleText, '已复制'); });
+  els.descText.addEventListener('click', function () { copyText(els.descText.textContent); flash(els.descText, '已复制'); });
+  function copyText(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t);
+    else {
+      var ta = document.createElement('textarea');
+      ta.value = t; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+  }
+
+  /* ================= ttwid 获取 ================= */
+  els.refreshTtwidBtn.addEventListener('click', async function () {
+    els.refreshTtwidBtn.disabled = true;
+    setStatus('<span class="spinner"></span>正在获取新 ttwid…');
+    try {
+      var ttwid = null;
+      var tries = [
+        { name: 'AllOrigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.iesdouyin.com/') },
+        { name: 'CodeTabs', url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://www.iesdouyin.com/') },
+        { name: 'CorsProxy', url: 'https://corsproxy.io/?url=' + encodeURIComponent('https://www.iesdouyin.com/') }
+      ];
+      for (var i = 0; i < tries.length && !ttwid; i++) {
+        try {
+          var r = await fetch(tries[i].url);
+          var setCookie = r.headers.get('x-set-cookie') || '';
+          var m = setCookie.match(/ttwid=([^;]+)/);
+          if (m) ttwid = m[1];
+        } catch (e) { /* 尝试下一个 */ }
+      }
+      if (!ttwid) throw new Error('所有代理均未返回 ttwid');
+      els.ttwid.value = ttwid;
+      saveSettings();
+      setStatus('已获取新 ttwid 并保存。');
+    } catch (e) {
+      showError('获取 ttwid 失败：' + e.message + '。可手动获取：浏览器打开 https://www.iesdouyin.com/ ，F12 → 网络 → 首页请求 → 响应头中的 Set-Cookie 里复制 ttwid= 后面的值。');
+    } finally {
+      els.refreshTtwidBtn.disabled = false;
+    }
+  });
+
+  /* ================= 启动 ================= */
+  loadSettings();
+
+  /* Worker 代码展示与复制 */
+  $('workerCode').textContent = $('workerSrc').textContent;
+  $('copyWorkerBtn').addEventListener('click', function () {
+    copyText($('workerCode').textContent);
+    flash($('copyWorkerBtn'), '已复制');
+  });
+})();
+</script>
+</body>
+</html>
