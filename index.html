@@ -244,7 +244,7 @@
         <div class="field">
           <label for="parseApi">解析接口（优先级最高；支持 <code>{url}</code> 与 <code>{id}</code> 占位符）<span id="apiBadge" style="display:none; margin-left:8px; font-size:11px; font-weight:600; color:#0a7d43; background:#e6f7ee; border:1px solid #b7e4c9; border-radius:20px; padding:1px 8px;">● 已启用</span></label>
           <input type="text" id="parseApi" placeholder="https://你的解析服务/api/parse?url={url}">
-          <p class="hint"><b>已默认为你配置好一个在线解析服务，无需任何设置即可直接解析链接。</b>它是本工具自带的 Node 服务（源码在项目 <code>douyin-service/</code> 目录），服务端完成「短链跳转 → 取 ttwid → 手机 UA 请求分享页 → 提取 <code>_ROUTER_DATA</code> → playwm 换 play 得无水印地址」。若该服务不可用，可换成你自己的任意解析接口，页面会自动适配常见返回格式。<button type="button" class="btn-ghost" id="resetApiBtn" style="margin-left:6px; padding:2px 8px; font-size:12px;">恢复默认</button></p>
+          <p class="hint"><b>已默认为你配置好一个在线解析服务，无需任何设置即可直接解析链接。</b>它是本工具自带的 Node 服务（源码见本项目 <code>api/parse.js</code> 与 <code>lib/douyin.js</code>），服务端完成「短链跳转 → 取 ttwid → 手机 UA 请求分享页 → 提取 <code>_ROUTER_DATA</code> → playwm 换 play 得无水印地址」。若该服务不可用，可换成你自己的任意解析接口，页面会自动适配常见返回格式。<button type="button" class="btn-ghost" id="resetApiBtn" style="margin-left:6px; padding:2px 8px; font-size:12px;">恢复默认</button></p>
         </div>
         <div class="field">
           <label for="mediaProxy">媒体代理（用于跨域下载原片 / 播放 / 提取音频，支持 <code>{url}</code> 占位符）</label>
