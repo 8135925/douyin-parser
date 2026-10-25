@@ -16,6 +16,20 @@ const path = require('path');
 const PORT = process.env.PORT || 3100;
 const HERE = __dirname;
 
+// 本地模拟时顺便读一下 .env（Vercel 线上由平台注入环境变量，不走这里）
+(function loadDotEnv() {
+  const f = path.join(HERE, '.env');
+  if (!fs.existsSync(f)) return;
+  for (const line of fs.readFileSync(f, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m) continue;
+    const k = m[1];
+    let v = m[2];
+    v = v.replace(/^(['"])([\s\S]*)\1$/, '$2');
+    if (process.env[k] === undefined) process.env[k] = v;
+  }
+})();
+
 // Vercel 的响应体上限（用于本地跟线上对齐校验）
 const VERCEL_BODY_LIMIT = 4.5 * 1024 * 1024;
 
@@ -24,6 +38,8 @@ const ROUTES = {
   '/api/media': require('./api/media.js'),
   '/api/health': require('./api/health.js'),
   '/api/diag': require('./api/diag.js'),
+  '/api/config': require('./api/config.js'),
+  '/api/asr': require('./api/asr.js'),
 };
 
 const MIME = {

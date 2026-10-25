@@ -58,10 +58,47 @@ vercel --prod     # 发布到生产
 
 也可以直接在 Vercel 网页端导入 Git 仓库，把 **Root Directory 设成 `douyin-service`**。
 
-> 不需要设置任何环境变量，不需要装依赖（`package.json` 里零依赖）。
-> 不需要 build 命令，Vercel 会自动识别 `api/` 目录为 Functions。
+> 不需要装依赖（`package.json` 里零依赖），不需要 build 命令，
+> Vercel 会自动识别 `api/` 目录为 Functions。
+> 环境变量是可选的：只有想让「音频转文字」免手填 Key 时才需要配，见下一节。
 
-### 2. 部署后先自检（重要）
+### 2. 配置音频转文字 Key（可选，推荐）
+
+在 Vercel 里加一个环境变量 `SILICONFLOW_API_KEY`，页面就不用每次手填 Key：
+
+**网页端**：Project → Settings → Environment Variables → Add New
+
+| 字段 | 值 |
+|---|---|
+| Key | `SILICONFLOW_API_KEY` |
+| Value | `sk-...`（硅基流动控制台 → API 密钥） |
+| Environments | 勾选 Production（Preview 建议一起勾） |
+
+保存后必须 **Deployments → 最新一次部署 → Redeploy** 才生效（改环境变量不会自动重新部署）。
+
+**命令行**：
+
+```bash
+vercel env add SILICONFLOW_API_KEY production
+vercel --prod        # 重新部署，让变量生效
+```
+
+**本地调试**：`dev-vercel.js` 会自动读取项目根目录的 `.env`：
+
+```ini
+SILICONFLOW_API_KEY=sk-你的key
+```
+
+**工作机制**：
+
+- 页面启动时请求 `GET /api/config`，只拿到「服务端有没有 Key」的布尔值（Key 永不下发浏览器）
+- 有 → 音频上传到 `POST /api/asr`，由函数补上 `Authorization` 转发给硅基流动
+- 没有 → 回退到页面里手填 Key 直连（老行为，Key 只存本机 localStorage）
+
+> ⚠️ Vercel 单次请求体上限 **4.5 MB**，16 kHz 单声道 WAV 约 32 KB/秒，即最长约 **2 分钟**音频。
+> 超长音频请在页面「设置」里填自己的 Key 直连，或用本机 `node server.js`。
+
+### 3. 部署后先自检（重要）
 
 ```
 https://你的域名/api/diag
@@ -77,7 +114,7 @@ https://你的域名/api/diag
 
 `parse.ok === true` 就说明这条链路在你这个部署上是通的，可以直接用页面。
 
-### 3. 用起来
+### 4. 用起来
 
 ```
 https://你的域名/           页面（同源，自动指向自己的 /api/parse）
@@ -219,6 +256,20 @@ Hobby 每月 100 万次调用，日常用完全够，但别拿它做批量爬取
 媒体中转。带 CORS、支持 Range、域名白名单防 SSRF（仅抖音系域名）。
 详见上文「4.5 MB 响应体上限」。
 
+### `POST /api/asr`
+
+音频转文字中转（`multipart/form-data`：`model` + `file`）。
+服务端补 `Authorization: Bearer $SILICONFLOW_API_KEY` 转发到硅基流动，结果原样返回。
+未配环境变量时返回 `501` + 说明。
+
+### `GET /api/config`
+
+```json
+{ "ok": true, "asr": { "serverKey": true, "proxyPath": "/api/asr" } }
+```
+
+只告诉前端「服务端有没有 Key」，不下发 Key 本身。
+
 ### `GET /api/health` / `GET /api/diag`
 
 健康检查 / 部署自检。
@@ -249,6 +300,8 @@ douyin-service/
 ├── api/                # Vercel Functions 入口
 │   ├── parse.js        # 解析
 │   ├── media.js        # 媒体中转（Range 分片）
+│   ├── asr.js          # 音频转文字中转（用环境变量里的 Key）
+│   ├── config.js       # 告诉前端服务端是否配了 Key
 │   ├── health.js
 │   └── diag.js         # 部署自检
 ├── lib/

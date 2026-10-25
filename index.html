@@ -234,9 +234,10 @@
         <div class="field">
           <label for="asrKey">硅基流动 API Key（音频转文字用，仅存本机 localStorage）</label>
           <div class="row">
-            <input type="password" id="asrKey" class="auto" style="flex:1" placeholder="sk-..." autocomplete="off">
+            <input type="password" id="asrKey" class="auto" style="flex:1" placeholder="留空则使用服务端已配置的 Key" autocomplete="off">
             <button type="button" id="toggleKeyBtn" class="btn-ghost auto" style="flex:0 0 auto">显示</button>
           </div>
+          <p class="hint" id="asrKeyHint">服务端未配置 Key：请填写自己的 Key（sk-…），或部署时在环境变量里配置 <code>SILICONFLOW_API_KEY</code>。</p>
         </div>
         <div class="field">
           <label for="asrModel">识别模型（免费）</label>
@@ -446,6 +447,11 @@
     abortFlag: false
   };
 
+  /* 服务端转写能力（由 /api/config 探得）：
+     配了环境变量 SILICONFLOW_API_KEY 时，浏览器无需填写 Key，
+     音频经服务端中转，Key 不会下发到页面。 */
+  var serverAsr = { available: false, path: '' };
+
   /* ================= DOM ================= */
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -537,6 +543,7 @@
     });
     els.customProxy.value = localStorage.getItem(LS.customProxy) || '';
     updateApiBadge();
+    renderAsrKeyHint();
   }
   function updateApiBadge() {
     var badge = document.getElementById('apiBadge');
@@ -547,6 +554,34 @@
       var isDefault = v === defaultParseApi();
       badge.textContent = isDefault ? '● 已启用（内置服务）' : '● 自定义接口';
     }
+  }
+
+  /* ---- ASR Key 来源提示 ---- */
+  function renderAsrKeyHint() {
+    var hint = document.getElementById('asrKeyHint');
+    if (!hint) return;
+    if (serverAsr.available) {
+      hint.innerHTML = '服务端已配置 Key（环境变量 <code>SILICONFLOW_API_KEY</code>），留空即可直接转写；填写则优先用本机 Key 直连。';
+    } else {
+      hint.innerHTML = '服务端未配置 Key：请填写自己的 Key（sk-…），或部署时把 <code>SILICONFLOW_API_KEY</code> 加到 Vercel 环境变量。';
+    }
+  }
+
+  /* 问一下服务端有没有配置 Key（只返回 has/未 has，不下发 Key） */
+  async function probeServerAsr() {
+    var o = serviceOrigin();
+    if (!o) return;
+    try {
+      var r = await fetch(o + '/api/config', { cache: 'no-store' });
+      if (r.ok) {
+        var d = await r.json();
+        if (d && d.asr) {
+          serverAsr.path = o + (d.asr.proxyPath || '/api/asr');
+          serverAsr.available = !!d.asr.serverKey;
+        }
+      }
+    } catch (e) { /* 服务不可用：保持「本机 Key 直连」模式 */ }
+    renderAsrKeyHint();
   }
   function saveSettings() {
     localStorage.setItem(LS.key, els.asrKey.value.trim());
@@ -1283,8 +1318,14 @@
   async function runTranscribe(blob) {
     var key = els.asrKey.value.trim();
     var model = els.asrModel.value;
-    if (!key) {
-      showError('请先在「设置」中填写硅基流动 API Key。');
+    // 本机 Key 优先（直连硅基流动）；没有本机 Key 时走服务端中转（Vercel 环境变量里的 Key）
+    if (!key && !serverAsr.available) {
+      await probeServerAsr();   // 首次点击时探测可能还没回来，这里再问一次
+    }
+    if (!key && !serverAsr.available) {
+      showError(
+        '还没有可用的 API Key。\n\n① 部署时在 Vercel 环境变量里配置 SILICONFLOW_API_KEY（推荐，配好后本页无需填写）；\n② 或在「设置」里填自己的 Key（只存本机浏览器）。'
+      );
       els.settingsCard.classList.remove('hidden');
       els.settingsDetails.open = true;
       return;
@@ -1297,22 +1338,45 @@
       var fname = (cur && cur.title ? cur.title.slice(0, 30) : 'audio') + '.' + (blob.type.indexOf('webm') >= 0 ? 'webm' : 'wav');
       fd.append('model', model);
       fd.append('file', blob, fname);
-      var resp = await fetch('https://api.siliconflow.cn/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key },
-        body: fd
-      });
-      var data = await resp.json().catch(function () { return null; });
-      if (!resp.ok) {
-        var msg = (data && data.message) || ('HTTP ' + resp.status);
-        throw new Error(msg);
+
+      var data;
+      if (key) {
+        var resp = await fetch('https://api.siliconflow.cn/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key },
+          body: fd
+        });
+        data = await resp.json().catch(function () { return null; });
+        if (!resp.ok) {
+          var msg = (data && (data.message || data.error)) || ('HTTP ' + resp.status);
+          throw new Error(msg);
+        }
+      } else {
+        // 服务端中转：音频经自己的函数转发，Key 不经过浏览器
+        if (blob.size > 4 * 1024 * 1024) {
+          throw new Error(
+            '音频 ' + fmtSize(blob.size) + ' 超过服务端中转的 4MB 上限（Vercel 单次请求体 4.5MB）。\n' +
+            '请把视频截短，或在「设置」里填自己的 API Key 改为直连。'
+          );
+        }
+        var sresp = await fetch(serverAsr.path, { method: 'POST', body: fd });
+        data = await sresp.json().catch(function () { return null; });
+        if (!sresp.ok) {
+          var smsg = (data && data.message) || ('HTTP ' + sresp.status);
+          if (sresp.status === 501) {
+            serverAsr.available = false;
+            renderAsrKeyHint();
+          }
+          throw new Error(smsg);
+        }
       }
+
       var text = data && typeof data.text === 'string' ? data.text : JSON.stringify(data, null, 2);
       text = cleanTranscript(text);
       if (!text.trim()) throw new Error('接口返回空结果（音频可能无人声）');
       els.transcriptText.value = text;
       els.transcriptBox.classList.remove('hidden');
-      setStatus('转写完成（模型 ' + model + '）。');
+      setStatus('转写完成（模型 ' + model + '，' + (key ? '本机 Key 直连' : '服务端代转') + '）。');
       els.transcriptBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
       showError('转写失败：' + e.message + '\n\n常见原因：Key 无效（复制时缺字符/未实名）、音频格式不支持、网络中断。');
@@ -1379,6 +1443,7 @@
 
   /* ================= 启动 ================= */
   loadSettings();
+  probeServerAsr();
 })();
 </script>
 </body>
