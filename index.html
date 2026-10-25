@@ -229,16 +229,17 @@
   <!-- ========== 设置面板 ========== -->
   <section class="card settings hidden" id="settingsCard">
     <details id="settingsDetails">
-      <summary>设置：解析服务、转写 API Key、识别模型（默认已配置好，通常无需修改）</summary>
+      <summary>设置：解析服务、媒体代理、转写模型（默认已配置好，通常无需修改）</summary>
       <div class="settings-body">
-        <div class="field">
-          <label for="asrKey">硅基流动 API Key（音频转文字用，仅存本机 localStorage）</label>
+        <div class="field" id="asrKeyField">
+          <label for="asrKey">本机 API Key（可选，仅存 localStorage）</label>
           <div class="row">
             <input type="password" id="asrKey" class="auto" style="flex:1" placeholder="留空则使用服务端已配置的 Key" autocomplete="off">
             <button type="button" id="toggleKeyBtn" class="btn-ghost auto" style="flex:0 0 auto">显示</button>
           </div>
           <p class="hint" id="asrKeyHint">服务端未配置 Key：请填写自己的 Key（sk-…），或部署时在环境变量里配置 <code>SILICONFLOW_API_KEY</code>。</p>
         </div>
+        <p class="hint hidden" id="asrServerHint" style="margin:-6px 0 14px;">音频转写由服务端完成（环境变量 <code>SILICONFLOW_API_KEY</code>），无需填写 Key。<button type="button" class="btn-ghost" id="useLocalKeyBtn" style="padding:1px 8px; font-size:12px; margin-left:4px;">使用本机 Key</button></p>
         <div class="field">
           <label for="asrModel">识别模型（免费）</label>
           <select id="asrModel">
@@ -556,16 +557,35 @@
     }
   }
 
-  /* ---- ASR Key 来源提示 ---- */
+  /* ---- ASR Key 来源：服务端已配置时隐藏「本机 Key」输入框，需要时手动展开 ---- */
   function renderAsrKeyHint() {
-    var hint = document.getElementById('asrKeyHint');
-    if (!hint) return;
-    if (serverAsr.available) {
-      hint.innerHTML = '服务端已配置 Key（环境变量 <code>SILICONFLOW_API_KEY</code>），留空即可直接转写；填写则优先用本机 Key 直连。';
+    var field = $('asrKeyField');
+    var hint = $('asrKeyHint');
+    var serverHint = $('asrServerHint');
+    if (serverAsr.available && !serverAsr.forceLocal) {
+      if (field) field.classList.add('hidden');
+      if (serverHint) serverHint.classList.remove('hidden');
     } else {
-      hint.innerHTML = '服务端未配置 Key：请填写自己的 Key（sk-…），或部署时把 <code>SILICONFLOW_API_KEY</code> 加到 Vercel 环境变量。';
+      if (field) field.classList.remove('hidden');
+      if (serverHint) serverHint.classList.add('hidden');
+      if (hint) {
+        hint.innerHTML = serverAsr.available
+          ? '已切换为直连：Key 只存本机浏览器，不经过服务端。<button type="button" class="btn-ghost" id="useServerKeyBtn" style="padding:1px 8px; font-size:12px; margin-left:4px;">改回服务端 Key</button>'
+          : '服务端未配置 Key：请填写自己的 Key（sk-…），或部署时把 <code>SILICONFLOW_API_KEY</code> 加到 Vercel 环境变量。';
+        var back = $('useServerKeyBtn');
+        if (back) back.addEventListener('click', function () {
+          serverAsr.forceLocal = false;
+          renderAsrKeyHint();
+        });
+      }
     }
   }
+  var useLocalKeyBtn = document.getElementById('useLocalKeyBtn');
+  if (useLocalKeyBtn) useLocalKeyBtn.addEventListener('click', function () {
+    serverAsr.forceLocal = true;
+    renderAsrKeyHint();
+    els.asrKey.focus();
+  });
 
   /* 问一下服务端有没有配置 Key（只返回 has/未 has，不下发 Key） */
   async function probeServerAsr() {
@@ -1316,9 +1336,11 @@
   }
 
   async function runTranscribe(blob) {
-    var key = els.asrKey.value.trim();
+    // 本机 Key 只在输入框可见时生效；服务端配好 Key 后输入框默认隐藏，直接用服务端中转
+    var keyField = $('asrKeyField');
+    var useLocal = keyField ? !keyField.classList.contains('hidden') : true;
+    var key = useLocal ? els.asrKey.value.trim() : '';
     var model = els.asrModel.value;
-    // 本机 Key 优先（直连硅基流动）；没有本机 Key 时走服务端中转（Vercel 环境变量里的 Key）
     if (!key && !serverAsr.available) {
       await probeServerAsr();   // 首次点击时探测可能还没回来，这里再问一次
     }

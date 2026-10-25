@@ -92,8 +92,9 @@ SILICONFLOW_API_KEY=sk-你的key
 **工作机制**：
 
 - 页面启动时请求 `GET /api/config`，只拿到「服务端有没有 Key」的布尔值（Key 永不下发浏览器）
-- 有 → 音频上传到 `POST /api/asr`，由函数补上 `Authorization` 转发给硅基流动
-- 没有 → 回退到页面里手填 Key 直连（老行为，Key 只存本机 localStorage）
+- 有 → **设置里的 Key 输入框自动隐藏**，音频上传到 `POST /api/asr`，由函数补上 `Authorization` 转发给硅基流动
+- 没有 → 显示 Key 输入框，回退到手填 Key 直连（老行为，Key 只存本机 localStorage）
+- 需要临时用本机 Key（比如音频超过 2 分钟）→ 点「使用本机 Key」展开，用完可点「改回服务端 Key」
 
 > ⚠️ Vercel 单次请求体上限 **4.5 MB**，16 kHz 单声道 WAV 约 32 KB/秒，即最长约 **2 分钟**音频。
 > 超长音频请在页面「设置」里填自己的 Key 直连，或用本机 `node server.js`。
