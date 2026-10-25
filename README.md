@@ -91,10 +91,15 @@ SILICONFLOW_API_KEY=sk-你的key
 
 **工作机制**：
 
-- 页面启动时请求 `GET /api/config`，只拿到「服务端有没有 Key」的布尔值（Key 永不下发浏览器）
-- 有 → **设置里的 Key 输入框自动隐藏**，音频上传到 `POST /api/asr`，由函数补上 `Authorization` 转发给硅基流动
-- 没有 → 显示 Key 输入框，回退到手填 Key 直连（老行为，Key 只存本机 localStorage）
-- 需要临时用本机 Key（比如音频超过 2 分钟）→ 点「使用本机 Key」展开，用完可点「改回服务端 Key」
+- 页面上**没有任何 Key 相关界面**，使用者感知不到 Key 的存在
+- 启动时请求 `GET /api/config`，只拿「服务端有没有 Key」的布尔值（此时不下发 Key 本身）
+- 4 MB 以内 → 音频上传到 `POST /api/asr`，由函数补上 `Authorization` 转发给硅基流动
+- 超过 4 MB（约 2 分钟）→ 调 `GET /api/config?reveal=1` 取回 Key，**浏览器直连**硅基流动，绕开请求体上限
+- 服务端没配 Key → 页面只提示「音频转写服务暂不可用」，同时在浏览器控制台打印配置提示
+
+> `?reveal=1` 会把 Key 明文返回给任何请求它的人。私有部署可以接受；
+> 若站点会公开给他人，设环境变量 `ASR_ALLOW_KEY_REVEAL=0` 关闭该行为
+> （关闭后超 4 MB 音频会提示改用本机 Key）。
 
 > ⚠️ Vercel 单次请求体上限 **4.5 MB**，16 kHz 单声道 WAV 约 32 KB/秒，即最长约 **2 分钟**音频。
 > 超长音频请在页面「设置」里填自己的 Key 直连，或用本机 `node server.js`。
@@ -269,7 +274,8 @@ Hobby 每月 100 万次调用，日常用完全够，但别拿它做批量爬取
 { "ok": true, "asr": { "serverKey": true, "proxyPath": "/api/asr" } }
 ```
 
-只告诉前端「服务端有没有 Key」，不下发 Key 本身。
+`?reveal=1` 且服务端有 Key 时额外返回 `asr.key`，供前端在大文件时改为直连
+（可用 `ASR_ALLOW_KEY_REVEAL=0` 关闭）。
 
 ### `GET /api/health` / `GET /api/diag`
 
