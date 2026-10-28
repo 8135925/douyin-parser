@@ -60,11 +60,19 @@ module.exports = async function handler(req, res) {
       }
       chunks.push(Buffer.from(value));
     }
-    const buf = Buffer.concat(chunks);
+    let buf = Buffer.concat(chunks);
 
     const headers = r.headers;
     headers.set('X-Dy-Chunked', r.ranged ? '1' : '0');
     headers.set('Cache-Control', 'public, max-age=3600');
+
+    // 回写的 Content-Range 必须与实际发出的字节数一致：
+    // 上游忽略 Range 时我们会多读到 HARD_CAP，按声明的区间截齐，避免前后分片错位。
+    const cm = (headers.get('content-range') || '').match(/bytes\s+(\d+)-(\d+)\//);
+    if (cm) {
+      const want = Number(cm[2]) - Number(cm[1]) + 1;
+      if (buf.length > want) buf = buf.subarray(0, want);
+    }
 
     return sendBuffer(res, r.status, buf, headers);
   } catch (e) {

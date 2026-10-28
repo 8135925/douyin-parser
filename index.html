@@ -436,6 +436,7 @@
     current: null,          // 当前媒体对象
     audioBlob: null,        // 已提取的音频
     audioInfo: null,
+    audioDuration: 0,       // 已提取音频的时长（秒）
     abortFlag: false
   };
 
@@ -966,6 +967,7 @@
     state.current = null;
     state.audioBlob = null;
     state.audioInfo = null;
+    state.audioDuration = 0;
     els.transcriptBox.classList.add('hidden');
     els.transcriptText.value = '';
     els.audioPlayer.removeAttribute('src');
@@ -975,6 +977,7 @@
   function renderResult(res) {
     state.current = res;
     state.audioBlob = null;
+    state.audioDuration = 0;
     els.resultCard.classList.remove('hidden');
     els.resultSource.textContent = '来源：链接解析';
 
@@ -1125,6 +1128,7 @@
     var btn = forTranscribe ? els.transcribeBtn : els.downloadAudioBtn;
     btn.disabled = true;
     var blob = null;
+    var duration = 0;
     try {
       if (!cur.videoUrl) throw new Error('当前结果没有可用的视频地址');
       // 经媒体中转直接取字节（抖音 CDN 无跨域头，这条是正解）
@@ -1132,13 +1136,15 @@
       var isProxied = target !== cur.videoUrl;
       try {
         setStatus('<span class="spinner"></span>正在获取媒体数据' + (isProxied ? '（经媒体中转）' : '') + '…');
-        blob = await fetchDecodeToWav(target);
+        var r1 = await fetchDecodeToWav(target);
+        blob = r1.blob; duration = r1.duration;
         state.audioInfo = (isProxied ? '媒体中转' : '直读解码') + ' · WAV 16kHz 单声道';
       } catch (e1) {
         // 备用直链
         if (cur.videoUrlBackup) {
           try {
-            blob = await fetchDecodeToWav(wrapMedia(cur.videoUrlBackup));
+            var r2 = await fetchDecodeToWav(wrapMedia(cur.videoUrlBackup));
+            blob = r2.blob; duration = r2.duration;
             state.audioInfo = '备用地址直读 · WAV 16kHz 单声道';
           } catch (e2) { /* 继续 */ }
         }
@@ -1148,10 +1154,20 @@
       }
       if (!blob) throw new Error('没有可提取的音频来源');
       state.audioBlob = blob;
+      state.audioDuration = duration;
       var aurl = URL.createObjectURL(blob);
       els.audioPlayer.src = aurl;
       els.audioWrap.classList.remove('hidden');
-      setStatus('音频提取完成：' + fmtSize(blob.size) + '（' + state.audioInfo + '）');
+      setStatus('音频提取完成：' + fmtSize(blob.size) + ' · ' + fmtDuration(duration) + '（' + state.audioInfo + '）');
+      // 与作品时长比对：明显偏短说明只解出一段，提示用户重试
+      var expected = cur.duration ? cur.duration / 1000 : 0;
+      if (expected > 2 && duration > 0 && duration < expected - 2) {
+        state.audioBlob = null;   // 别缓存半截音频，下次点击重新取
+        showWarn(
+          '注意：解析出的音频只有 ' + fmtDuration(duration) + '，而视频时长是 ' + fmtDuration(expected) +
+          '。多半是抖音 CDN 只返回了部分数据——再点一次「下载音频」会重新完整获取一次。'
+        );
+      }
       if (forTranscribe) {
         runTranscribe(blob);
       } else {
@@ -1168,35 +1184,61 @@
   /* ================= 媒体字节的完整拉取（Range 分块） =================
      云平台（Vercel 等）单次响应体只有 4.5MB 上限，所以媒体中转会主动把
      响应截成 3MB 分片并回 Content-Range（含总长度）。
-     这里按分片循环取全，拼成完整字节 —— 下载原片与解码音频都靠它。
+
+     这里按分片循环取全，三条硬规则：
+       ① 每片校验返回起点 == 请求的 offset —— CDN 若忽略 Range 会从头返回，
+          拼起来就是错位数据（表现：mp4 只解出前几十秒就不再往里读）
+       ② 拿到总长就必须取够，否则抛错，绝不返回半截数据
+       ③ 任何分片异常整体重试一次（带 cache-busting 参数）
      若中转不返回 206（自建服务未分片），走一次整包直接返回。 */
+  var MEDIA_CHUNK = 3 * 1024 * 1024;
+
   async function fetchMediaAll(url, onProgress) {
+    var lastErr = null;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await fetchMediaOnce(url, onProgress, attempt > 0);
+      } catch (e) {
+        lastErr = e;
+        if (attempt === 0) await new Promise(function (r) { setTimeout(r, 400); });
+      }
+    }
+    throw lastErr || new Error('媒体取流失败');
+  }
+
+  async function fetchMediaOnce(url, onProgress, bust) {
     var parts = [];
     var offset = 0;
     var total = null;
     var guard = 0;
 
-    while (guard++ < 300) {
+    while (guard++ < 400) {
       // 首片也主动带 Range：不依赖「服务端会自行分片」。
-      // 某些网关会把无 Range 请求的 206 改写成 200，去掉 Content-Range，
-      // 那样大文件会被误判成「已取完」。主动请求 Range 可确保拿到 206 + 总长。
-      var headers = { Range: 'bytes=' + offset + '-' };
+      var reqUrl = url;
+      if (bust) reqUrl += (url.indexOf('?') >= 0 ? '&' : '?') + '_r=' + Date.now().toString(36) + guard;
+
       var resp;
       try {
-        resp = await fetch(url, { headers: headers });
+        resp = await fetch(reqUrl, { headers: { Range: 'bytes=' + offset + '-' } });
       } catch (e) {
         if (offset === 0) throw e;
         throw new Error('分片请求失败（已下载 ' + fmtSize(offset) + '）：' + e.message);
       }
 
+      if (resp.status === 416) {
+        // 已经到文件末尾（CDN 报的总长偶尔偏大，以实际取到的为准）
+        if (offset > 0) { total = offset; break; }
+        throw new Error('分片越界（0 字节）');
+      }
       if (!resp.ok) {
         if (offset === 0) throw new Error('HTTP ' + resp.status);
-        break; // 已有数据，按现有内容继续
+        throw new Error('分片请求失败（已下载 ' + fmtSize(offset) + '）：HTTP ' + resp.status);
       }
 
       // 不支持 Range / 未被分片：整包即全部
       if (resp.status !== 206) {
         var whole = await resp.arrayBuffer();
+        if (!whole.byteLength) break;
         parts.push(whole);
         offset += whole.byteLength;
         break;
@@ -1205,28 +1247,31 @@
       var cr = resp.headers.get('Content-Range') || '';
       var m = cr.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/);
       var buf = await resp.arrayBuffer();
-      if (!buf.byteLength) break;
+      if (!buf.byteLength) throw new Error('分片为空（已下载 ' + fmtSize(offset) + '）');
+
+      if (m) {
+        var startAt = parseInt(m[1], 10);
+        if (startAt !== offset) {
+          throw new Error('分片起点不连续（期望 ' + offset + '，实际 ' + startAt + '），CDN 可能忽略了 Range');
+        }
+        if (m[3] !== '*') total = parseInt(m[3], 10);
+      }
 
       parts.push(buf);
       offset += buf.byteLength;
+      if (onProgress) onProgress(offset, total);
 
-      if (m) {
-        if (m[3] !== '*') total = parseInt(m[3], 10);
-        if (onProgress) onProgress(offset, total);
-        if (total && offset >= total) break;
-      } else {
-        break; // 没有总长信息，没法判断是否取完，按单片处理
-      }
+      if (total && offset >= total) break;
+      if (total && offset > total) throw new Error('分片长度超出文件总长');
 
-      // 单片不足预期（上游提前结束）也算完
-      if (buf.byteLength < 1024 && total && offset < total) break;
+      // 拿不到 Content-Range 时：不足一个分片长度即视为最后一片
+      if (!m && buf.byteLength < MEDIA_CHUNK) break;
+      if (buf.byteLength < 1024) throw new Error('分片异常（' + buf.byteLength + ' 字节）');
     }
 
     if (!parts.length) throw new Error('未取到任何媒体数据');
-
-    // 只有一片且长度远小于常见视频 -> 可能是空壳
-    if (parts.length === 1 && offset < 1024) {
-      throw new Error('返回内容异常（' + offset + ' 字节）');
+    if (total && offset < total) {
+      throw new Error('数据不完整：已取 ' + fmtSize(offset) + ' / 共 ' + fmtSize(total));
     }
 
     var out = new Uint8Array(offset);
@@ -1238,7 +1283,8 @@
     return out.buffer;
   }
 
-  /* fetch 媒体字节并解码为 16kHz 单声道 WAV */
+  /* fetch 媒体字节并解码为 16kHz 单声道 WAV
+     返回 { blob, duration }：duration 用于和作品时长比对，发现「只解出一段」的情况 */
   async function fetchDecodeToWav(url) {
     var ab = await fetchMediaAll(url, function (got, total) {
       if (total) {
@@ -1266,7 +1312,7 @@
     src.connect(offline.destination);
     src.start();
     var rendered = await offline.startRendering();
-    return wavBlob(rendered);
+    return { blob: wavBlob(rendered), duration: audioBuf.duration };
   }
 
   function wavBlob(audioBuffer) {
